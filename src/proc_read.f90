@@ -1,10 +1,17 @@
       subroutine proc_read
      
+      use input_file_module
       implicit none
              
       call ch_read_temp
       call cli_read_atmodep
+
       call cli_staread
+      
+      ! Read NetCDF time series data if using NetCDF
+      if (in_cli%weat_sta == "netcdf.ncw") then
+          call cli_ncdf_meas 
+      end if
 
       call constit_db_read
       call pest_metabolite_read     !! read pesticide metabolites
