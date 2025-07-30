@@ -37,7 +37,9 @@ subroutine cli_ncdf_meas
     integer :: ilat, ilon
     
     ! Variables for date calculation
-    integer :: days_since_1970, year, month, day, days_in_months(12)
+    integer :: days_since_ref, year, month, day, days_in_months(12)
+    integer :: ref_year, ref_month, ref_day
+    character(len=256) :: time_units
     
     ! Loop counters and diagnostics
     integer :: istat, itime, iyear, iday, i, iwst
@@ -48,12 +50,33 @@ subroutine cli_ncdf_meas
     character(len=NF_MAX_NAME) :: var_name, dim_name
     integer :: dim_len
     
+    ! Variables for monthly statistics calculation
+    integer :: mo, day_mo
+    logical :: exists
+    
     version_string = nf_inq_libvers()
-    write (*,*) "reading data using netcdf version", trim(version_string)
-    write (9003,*) "reading data using netcdf version", trim(version_string)
+    if (version_string(len_trim(version_string):len_trim(version_string)) == '$') then
+        version_string(len_trim(version_string):len_trim(version_string)) = ' '
+    endif
+    write (*,*) "reading data using netcdf version ", trim(version_string)
+    write (9003,*) "reading data using netcdf version ", trim(version_string)
 
-    ! Get NetCDF filename - use test data file
-    ncdf_file = "save.nc4"
+    ! Get NetCDF filename based on precipitation path from file.cio
+    if (in_path_pcp%pcp == "null" .or. trim(in_path_pcp%pcp) == " ") then
+        ncdf_file = ""
+        write(*,*) "! error: No NetCDF file specified in pcp path in 'file.cio'"
+        write (9003,*) "! error: No NetCDF file specified in pcp path in 'file.cio'"
+        stop
+    else
+        ! check if the file exists
+        ncdf_file = TRIM(ADJUSTL(in_path_pcp%pcp))
+        inquire(file=trim(ncdf_file), exist=exists)
+        if (.not. exists) then
+            write(*,*) "! error: NetCDF file does not exist at", trim(ncdf_file)
+            write (9003,*) "! error: NetCDF file does not exist at", trim(ncdf_file)
+            stop
+        end if
+    endif
     
     ! Open NetCDF file
     status = nf_open(trim(ncdf_file), NF_NOWRITE, ncid)
@@ -126,39 +149,34 @@ subroutine cli_ncdf_meas
         endif
     endif
     
-    
-    ! Find closest grid point
-    min_dist = 999999.0
-    target_lat_idx = 1
-    target_lon_idx = 1
-    
-    do ilat = 1, nlat
-        do ilon = 1, nlon
-            ! Simple Euclidean distance (for small areas this is adequate)
-            dist = sqrt((lat_vals(ilat) - target_lat)**2 + (lon_vals(ilon) - target_lon)**2)
-            if (dist < min_dist) then
-                min_dist = dist
-                target_lat_idx = ilat
-                target_lon_idx = ilon
-            endif
-        end do
-    end do
+    ! Skip to 100 continue
+    goto 100
     
 100 continue
     
     ! Read time data to get the date for first time step
     status = nf_inq_varid(ncid, "time", time_varid)
     if (status == NF_NOERR) then
+        ! Read time units attribute to get reference date
+        status = nf_get_att_text(ncid, time_varid, "units", time_units)
+        if (status /= NF_NOERR) then
+            write (*,*) "! warning: Cannot read time units attribute, assuming days since 1970-01-01"
+            write (9003,*) "! warning: Cannot read time units attribute, assuming days since 1970-01-01"
+            time_units = "days since 1970-01-01 00:00:00"
+        endif
+        
+        ! Parse reference date from time units string
+        ! Expected format: "days since YYYY-MM-DD HH:MM:SS" or "days since YYYY-MM-DD"
+        call parse_time_units(time_units, ref_year, ref_month, ref_day)
+        
         status = nf_get_var_real(ncid, time_varid, time_vals)
         if (status == NF_NOERR) then
             if (ntime >= 1) then
-                ! Time is in "days since 1970-01-01 00:00:00.0"
-                ! Convert to readable date
-                days_since_1970 = int(time_vals(1))
+                ! Time is in "days since ref_date"
+                days_since_ref = int(time_vals(1))
                 
-                ! Simple date calculation (approximate)
-                year = 1970 + days_since_1970 / 365
-                ! For simplicity, just show the raw days value and approximate year
+                ! Calculate actual date from reference date + days offset
+                call add_days_to_date(ref_year, ref_month, ref_day, days_since_ref, year, month, day)
             endif
         else
             write (*,*) "Error reading time data: ", nf_strerror(status)
@@ -272,6 +290,17 @@ subroutine cli_ncdf_meas
     db_mx%rhfiles = db_mx%wst
     db_mx%wndfiles = db_mx%wst
     
+    ! Set the climate file indices for each station based on station index
+    ! This is needed because NetCDF data is indexed by station, unlike traditional
+    ! files which use the search() function to map file names to indices
+    do i = 1, db_mx%wst
+        wst(i)%wco%pgage = i
+        wst(i)%wco%tgage = i
+        wst(i)%wco%sgage = i
+        wst(i)%wco%hgage = i
+        wst(i)%wco%wgage = i
+    end do
+    
     do iwst = 1, db_mx%wst
         
         ! Find closest grid point to this station
@@ -378,10 +407,19 @@ subroutine cli_ncdf_meas
         
         ! Calculate proper end_day based on leap year for last year (like traditional method)
         actual_year = pcp(iwst)%end_yr
-        if (Mod(actual_year, 4) == 0) then
+        ! Use proper leap year calculation (same as time_control.f90)
+        if (Mod(actual_year,4) == 0) then
+          if (Mod(actual_year,100) == 0) then
+            if (Mod(actual_year,400) == 0) then
+              pcp(iwst)%end_day = 366  ! Last day of leap year
+            else
+              pcp(iwst)%end_day = 365  ! Century year, not leap
+            end if
+          else
             pcp(iwst)%end_day = 366  ! Last day of leap year
+          end if
         else
-            pcp(iwst)%end_day = 365  ! Last day of non-leap year
+          pcp(iwst)%end_day = 365  ! Last day of non-leap year
         endif
         
         ! Calculate yrs_start correctly (like traditional method)
@@ -429,16 +467,24 @@ subroutine cli_ncdf_meas
         ! CRITICAL: Use Julian day indexing (1-366) like traditional method
         itime = 1
         do iyear = 1, pcp(iwst)%nbyr
-            ! Handle leap years properly (like traditional method)
+            ! Handle leap years properly (using traditional method logic)
             ! Calculate actual year for this data year
             actual_year = pcp(iwst)%start_yr + iyear - 1
             days_in_year_loop = 365
             
-            ! Check for leap year (same logic as traditional method)
-            if (Mod(actual_year, 4) == 0) then
-                days_in_year_loop = 366
+            ! Check for leap year (same logic as time_control.f90)
+            if (Mod(actual_year,4) == 0) then
+              if (Mod(actual_year,100) == 0) then
+                if (Mod(actual_year,400) == 0) then
+                  days_in_year_loop = 366  ! Leap year
+                else
+                  days_in_year_loop = 365  ! Century year, not leap
+                end if
+              else
+                days_in_year_loop = 366  ! Leap year
+              end if
             else
-                days_in_year_loop = 365
+              days_in_year_loop = 365  ! Not a leap year
             endif
             
             do iday = 1, days_in_year_loop  ! Use correct number of days for the year
@@ -493,9 +539,6 @@ subroutine cli_ncdf_meas
         
     end do
     
-    write(*,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
-    write(9003,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
-
     
     ! close netcdf file
     status = nf_close(ncid)
@@ -503,10 +546,123 @@ subroutine cli_ncdf_meas
     ! clean up allocated arrays
     deallocate(time_vals, lat_vals, lon_vals)
     deallocate(pcp_data, tmin_data, tmax_data, slr_data, hmd_data, wnd_data)
-
-    write (*,*) "netcdf weather data reading completed successfully!"
-    write (9003,*) "netcdf weather data reading completed successfully!"
+    
+    write(*,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
+    write(9003,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
 
     return
+
+contains
+
+    ! Helper subroutine to parse time units string
+    subroutine parse_time_units(units_str, ref_yr, ref_mo, ref_dy)
+        character(len=*), intent(in) :: units_str
+        integer, intent(out) :: ref_yr, ref_mo, ref_dy
+        
+        integer :: pos1, pos2, ios
+        character(len=20) :: date_part
+        
+        ! Initialize defaults
+        ref_yr = 1970
+        ref_mo = 1
+        ref_dy = 1
+        
+        ! Find "since" keyword
+        pos1 = index(units_str, "since")
+        if (pos1 > 0) then
+            pos1 = pos1 + 5  ! Move past "since"
+            
+            ! Skip whitespace
+            do while (pos1 <= len(units_str) .and. units_str(pos1:pos1) == ' ')
+                pos1 = pos1 + 1
+            end do
+            
+            ! Find end of date part (before time if present)
+            pos2 = index(units_str(pos1:), ' ')
+            if (pos2 == 0) then
+                pos2 = len(units_str) + 1
+            else
+                pos2 = pos1 + pos2 - 1
+            endif
+            
+            date_part = units_str(pos1:pos2-1)
+            
+            ! Parse YYYY-MM-DD format
+            read(date_part(1:4), *, iostat=ios) ref_yr
+            if (ios == 0 .and. len_trim(date_part) >= 7) then
+                read(date_part(6:7), *, iostat=ios) ref_mo
+            endif
+            if (ios == 0 .and. len_trim(date_part) >= 10) then
+                read(date_part(9:10), *, iostat=ios) ref_dy
+            endif
+        endif
+        
+        ! Validate parsed values
+        if (ref_yr < 1000 .or. ref_yr > 5000) ref_yr = 1970
+        if (ref_mo < 1 .or. ref_mo > 12) ref_mo = 1
+        if (ref_dy < 1 .or. ref_dy > 31) ref_dy = 1
+        
+    end subroutine parse_time_units
+    
+    ! Helper subroutine to add days to a date
+    subroutine add_days_to_date(start_yr, start_mo, start_dy, days_to_add, end_yr, end_mo, end_dy)
+        integer, intent(in) :: start_yr, start_mo, start_dy, days_to_add
+        integer, intent(out) :: end_yr, end_mo, end_dy
+        
+        integer :: days_left, days_in_month
+        integer :: month_days(12) = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        
+        end_yr = start_yr
+        end_mo = start_mo
+        end_dy = start_dy
+        days_left = days_to_add
+        
+        ! Add days
+        do while (days_left > 0)
+            ! Check for leap year and adjust February
+            if (end_mo == 2) then
+                if (is_leap_year(end_yr)) then
+                    days_in_month = 29
+                else
+                    days_in_month = 28
+                endif
+            else
+                days_in_month = month_days(end_mo)
+            endif
+            
+            if (end_dy + days_left <= days_in_month) then
+                ! Remaining days fit in current month
+                end_dy = end_dy + days_left
+                days_left = 0
+            else
+                ! Move to next month
+                days_left = days_left - (days_in_month - end_dy + 1)
+                end_dy = 1
+                end_mo = end_mo + 1
+                if (end_mo > 12) then
+                    end_mo = 1
+                    end_yr = end_yr + 1
+                endif
+            endif
+        end do
+        
+    end subroutine add_days_to_date
+    
+    ! Helper function to check if year is leap year
+    logical function is_leap_year(check_year)
+        integer, intent(in) :: check_year
+        
+        is_leap_year = .false.
+        if (mod(check_year, 4) == 0) then
+            if (mod(check_year, 100) == 0) then
+                if (mod(check_year, 400) == 0) then
+                    is_leap_year = .true.
+                endif
+            else
+                is_leap_year = .true.
+            endif
+        endif
+        
+    end function is_leap_year
 
 end subroutine cli_ncdf_meas
