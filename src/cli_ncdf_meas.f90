@@ -1,74 +1,152 @@
 subroutine cli_ncdf_meas
     
     ! This subroutine reads NetCDF climate data for SWAT+ simulation
+    ! Using NetCDF C interface instead of Fortran interface
 
     use climate_module
     use maximum_data_module
     use time_module
     use input_file_module
+    use iso_c_binding
     
     implicit none
     
-    ! Use C-style NetCDF interface (works with Intel compilers)
-    include 'netcdf.inc'
+    ! NetCDF C constants
+    integer(c_int), parameter :: NC_NOERR = 0
+    integer(c_int), parameter :: NC_NOWRITE = 0
+    integer(c_int), parameter :: NC_FLOAT = 5
+    integer(c_int), parameter :: NC_CHAR = 2
+    integer(c_int), parameter :: NC_MAX_NAME = 256
+    integer(c_int), parameter :: NC_MAX_VAR_DIMS = 32
+    
+    ! NetCDF C function interfaces
+    interface
+        function nc_open_c(path, mode, ncidp) bind(c, name='nc_open')
+            import :: c_int, c_char
+            character(kind=c_char), intent(in) :: path(*)
+            integer(c_int), value, intent(in) :: mode
+            integer(c_int), intent(out) :: ncidp
+            integer(c_int) :: nc_open_c
+        end function
+        
+        function nc_close_c(ncid) bind(c, name='nc_close')
+            import :: c_int
+            integer(c_int), value, intent(in) :: ncid
+            integer(c_int) :: nc_close_c
+        end function
+        
+        function nc_inq_dimid_c(ncid, name, dimidp) bind(c, name='nc_inq_dimid')
+            import :: c_int, c_char
+            integer(c_int), value, intent(in) :: ncid
+            character(kind=c_char), intent(in) :: name(*)
+            integer(c_int), intent(out) :: dimidp
+            integer(c_int) :: nc_inq_dimid_c
+        end function
+        
+        function nc_inq_dimlen_c(ncid, dimid, lenp) bind(c, name='nc_inq_dimlen')
+            import :: c_int, c_size_t
+            integer(c_int), value, intent(in) :: ncid
+            integer(c_int), value, intent(in) :: dimid
+            integer(c_size_t), intent(out) :: lenp
+            integer(c_int) :: nc_inq_dimlen_c
+        end function
+        
+        function nc_inq_varid_c(ncid, name, varidp) bind(c, name='nc_inq_varid')
+            import :: c_int, c_char
+            integer(c_int), value, intent(in) :: ncid
+            character(kind=c_char), intent(in) :: name(*)
+            integer(c_int), intent(out) :: varidp
+            integer(c_int) :: nc_inq_varid_c
+        end function
+        
+        function nc_get_var_float_c(ncid, varid, ip) bind(c, name='nc_get_var_float')
+            import :: c_int, c_float
+            integer(c_int), value, intent(in) :: ncid
+            integer(c_int), value, intent(in) :: varid
+            real(c_float), intent(out) :: ip(*)
+            integer(c_int) :: nc_get_var_float_c
+        end function
+        
+        function nc_get_att_text_c(ncid, varid, name, ip) bind(c, name='nc_get_att_text')
+            import :: c_int, c_char
+            integer(c_int), value, intent(in) :: ncid
+            integer(c_int), value, intent(in) :: varid
+            character(kind=c_char), intent(in) :: name(*)
+            character(kind=c_char), intent(out) :: ip(*)
+            integer(c_int) :: nc_get_att_text_c
+        end function
+        
+        function nc_inq_attlen_c(ncid, varid, name, lenp) bind(c, name='nc_inq_attlen')
+            import :: c_int, c_char, c_size_t
+            integer(c_int), value, intent(in) :: ncid
+            integer(c_int), value, intent(in) :: varid
+            character(kind=c_char), intent(in) :: name(*)
+            integer(c_size_t), intent(out) :: lenp
+            integer(c_int) :: nc_inq_attlen_c
+        end function
+        
+        function nc_strerror_c(ncerr) bind(c, name='nc_strerror')
+            import :: c_int, c_ptr
+            integer(c_int), value, intent(in) :: ncerr
+            type(c_ptr) :: nc_strerror_c
+        end function
+    end interface
     
     ! NetCDF variables
-    integer :: ncid, varid, dimid
-    integer :: status
+    integer(c_int) :: ncid, varid, dimid
+    integer(c_int) :: status
     character(len=256) :: ncdf_file
-    character(len=256) :: version_string
+    character(len=257, kind=c_char) :: ncdf_file_c
     
     ! NetCDF dimensions
-    integer :: time_dimid, lat_dimid, lon_dimid
+    integer(c_int) :: time_dimid, lat_dimid, lon_dimid
+    integer(c_size_t) :: ntime_c, nlat_c, nlon_c
     integer :: ntime, nlat, nlon
     
     ! NetCDF variable IDs
-    integer :: time_varid, lat_varid, lon_varid
-    integer :: pcp_varid, tmin_varid, tmax_varid, slr_varid, hmd_varid, wnd_varid
+    integer(c_int) :: time_varid, lat_varid, lon_varid
+    integer(c_int) :: pcp_varid, tmin_varid, tmax_varid, slr_varid, hmd_varid, wnd_varid
     
     ! Arrays for reading ALL data
-    real, dimension(:), allocatable :: time_vals, lat_vals, lon_vals
-    real, dimension(:,:,:), allocatable :: pcp_data, tmin_data, tmax_data
-    real, dimension(:,:,:), allocatable :: slr_data, hmd_data, wnd_data
+    real(c_float), dimension(:), allocatable :: time_vals, lat_vals, lon_vals
+    real(c_float), dimension(:,:,:), allocatable :: pcp_data, tmin_data, tmax_data
+    real(c_float), dimension(:,:,:), allocatable :: slr_data, hmd_data, wnd_data
     
     ! Variables for finding closest grid point
     integer :: target_lat_idx, target_lon_idx
-    real :: target_lat, target_lon, min_dist, dist
+    real :: min_dist, dist
     integer :: ilat, ilon
     
     ! Variables for date calculation
-    integer :: days_since_ref, year, month, day, days_in_months(12)
+    integer :: days_since_ref, year, month, day
     integer :: ref_year, ref_month, ref_day
     character(len=256) :: time_units
+    character(len=257, kind=c_char) :: time_units_c
+    integer(c_size_t) :: att_len
     
     ! Loop counters and diagnostics
-    integer :: istat, itime, iyear, iday, i, iwst
-    integer :: start_year, start_day, current_year, days_in_year
-    integer :: actual_year  ! For leap year calculation
-    integer :: days_in_year_loop ! For proper leap year counting
-    integer :: ndims, dimids(NF_MAX_VAR_DIMS), natts, xtype
-    character(len=NF_MAX_NAME) :: var_name, dim_name
-    integer :: dim_len
-    
-    ! Variables for monthly statistics calculation
-    integer :: mo, day_mo
+    integer :: itime, iyear, iday, i, iwst
+    integer :: actual_year, days_in_year_loop
     logical :: exists
     
-    version_string = nf_inq_libvers()
-    if (version_string(len_trim(version_string):len_trim(version_string)) == '$') then
-        version_string(len_trim(version_string):len_trim(version_string)) = ' '
-    endif
-    write (*,*) "reading data using netcdf version ", trim(version_string)
-    write (9003,*) "reading data using netcdf version ", trim(version_string)
+    ! Helper function to convert C string pointer to Fortran string
+    interface
+        function c_strlen(str) bind(c, name='strlen')
+            import :: c_ptr, c_size_t
+            type(c_ptr), value, intent(in) :: str
+            integer(c_size_t) :: c_strlen
+        end function
+    end interface
+    
+    write (*,*) "reading data using netcdf C interface"
+    write (9003,*) "reading data using netcdf C interface"
 
     ! Get NetCDF filename based on precipitation path from file.cio
     if (in_path_pcp%pcp == "null" .or. trim(in_path_pcp%pcp) == " ") then
-        ncdf_file = ""
         write(*,*) "! error: No NetCDF file specified in pcp path in 'file.cio'"
         write (9003,*) "! error: No NetCDF file specified in pcp path in 'file.cio'"
         stop
     else
-        ! check if the file exists
         ncdf_file = TRIM(ADJUSTL(in_path_pcp%pcp))
         inquire(file=trim(ncdf_file), exist=exists)
         if (.not. exists) then
@@ -78,206 +156,152 @@ subroutine cli_ncdf_meas
         end if
     endif
     
+    ! Convert filename to C string
+    call f_to_c_string(ncdf_file, ncdf_file_c)
+    
     ! Open NetCDF file
-    status = nf_open(trim(ncdf_file), NF_NOWRITE, ncid)
-    if (status /= NF_NOERR) then
-        write (*,*) "ERROR: Cannot open NetCDF file: ", trim(ncdf_file)
-        write (*,*) "NetCDF Error: ", nf_strerror(status)
-        write (9003,*) "ERROR: Cannot open NetCDF file: ", trim(ncdf_file)
+    status = nc_open_c(ncdf_file_c, NC_NOWRITE, ncid)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot open NetCDF file: ", trim(ncdf_file)
+        write (*,*) "! NetCDF Error code: ", status
+        write (9003,*) "! error: Cannot open NetCDF file: ", trim(ncdf_file)
         stop
     endif
     
     ! Get dimensions for gridded data
-    status = nf_inq_dimid(ncid, "time", time_dimid)
-    if (status /= NF_NOERR) then
-        write (*,*) "ERROR: Cannot find 'time' dimension"
-        write (9003,*) "ERROR: Cannot find 'time' dimension"
+    status = nc_inq_dimid_c(ncid, "time" // c_null_char, time_dimid)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot find 'time' dimension, code:", status
+        write (9003,*) "! error: Cannot find 'time' dimension, code:", status
         stop
     endif
     
-    status = nf_inq_dimid(ncid, "lat", lat_dimid)
-    if (status /= NF_NOERR) then
-        write (*,*) "ERROR: Cannot find 'lat' dimension"
-        write (9003,*) "ERROR: Cannot find 'lat' dimension"
+    status = nc_inq_dimid_c(ncid, "lat" // c_null_char, lat_dimid)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot find 'lat' dimension, code:", status
+        write (9003,*) "! error: Cannot find 'lat' dimension, code:", status
         stop
     endif
     
-    status = nf_inq_dimid(ncid, "lon", lon_dimid)
-    if (status /= NF_NOERR) then
-        write (*,*) "ERROR: Cannot find 'lon' dimension"
-        write (9003,*) "ERROR: Cannot find 'lon' dimension"
+    status = nc_inq_dimid_c(ncid, "lon" // c_null_char, lon_dimid)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot find 'lon' dimension, code:", status
+        write (9003,*) "! error: Cannot find 'lon' dimension, code:", status
         stop
     endif
     
     ! Get dimension sizes
-    status = nf_inq_dimlen(ncid, time_dimid, ntime)
-    status = nf_inq_dimlen(ncid, lat_dimid, nlat)
-    status = nf_inq_dimlen(ncid, lon_dimid, nlon)
-    
-    ! Check variable dimension order before allocating arrays
-    status = nf_inq_varid(ncid, "pcp", pcp_varid)
-    if (status == NF_NOERR) then
-        status = nf_inq_var(ncid, pcp_varid, var_name, xtype, ndims, dimids, natts)
-        do i = 1, ndims
-            status = nf_inq_dim(ncid, dimids(i), dim_name, dim_len)
-        end do
+    status = nc_inq_dimlen_c(ncid, time_dimid, ntime_c)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot get time dimension length, code:", status
+        stop
     endif
+    ntime = int(ntime_c)
     
-    ! Allocate arrays - actual storage order is (lon, lat, time)
+    status = nc_inq_dimlen_c(ncid, lat_dimid, nlat_c)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot get lat dimension length, code:", status
+        stop
+    endif
+    nlat = int(nlat_c)
+    
+    status = nc_inq_dimlen_c(ncid, lon_dimid, nlon_c)
+    if (status /= NC_NOERR) then
+        write (*,*) "! error: Cannot get lon dimension length, code:", status
+        stop
+    endif
+    nlon = int(nlon_c)
+    
+    ! Allocate arrays - storage order is (lon, lat, time)
     allocate(time_vals(ntime), lat_vals(nlat), lon_vals(nlon))
     allocate(pcp_data(nlon, nlat, ntime), tmin_data(nlon, nlat, ntime), tmax_data(nlon, nlat, ntime))
     allocate(slr_data(nlon, nlat, ntime), hmd_data(nlon, nlat, ntime), wnd_data(nlon, nlat, ntime))
     
     ! Read coordinate data
-    status = nf_inq_varid(ncid, "lat", lat_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, lat_varid, lat_vals)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading lat data: ", nf_strerror(status)
-            write (9003,*) "Error reading lat data: ", nf_strerror(status)
+    status = nc_inq_varid_c(ncid, "lat" // c_null_char, lat_varid)
+    if (status == NC_NOERR) then
+        status = nc_get_var_float_c(ncid, lat_varid, lat_vals)
+        if (status /= NC_NOERR) then
+            write (*,*) "! error reading lat data, code: ", status
+            write (9003,*) "! error reading lat data, code: ", status
             stop
         endif
+    else
+        write (*,*) "WARNING: Cannot find lat variable, code:", status
     endif
     
-    status = nf_inq_varid(ncid, "lon", lon_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, lon_varid, lon_vals)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading lon data: ", nf_strerror(status)
-            write (9003,*) "Error reading lon data: ", nf_strerror(status)
+    status = nc_inq_varid_c(ncid, "lon" // c_null_char, lon_varid)
+    if (status == NC_NOERR) then
+        status = nc_get_var_float_c(ncid, lon_varid, lon_vals)
+        if (status /= NC_NOERR) then
+            write (*,*) "! error reading lon data, code: ", status
+            write (9003,*) "! error reading lon data, code: ", status
             stop
         endif
+    else
+        write (*,*) "! WARNING: Cannot find lon variable, code:", status
     endif
-    
-    ! Skip to 100 continue
-    goto 100
-    
-100 continue
     
     ! Read time data to get the date for first time step
-    status = nf_inq_varid(ncid, "time", time_varid)
-    if (status == NF_NOERR) then
-        ! Read time units attribute to get reference date
-        status = nf_get_att_text(ncid, time_varid, "units", time_units)
-        if (status /= NF_NOERR) then
-            write (*,*) "! warning: Cannot read time units attribute, assuming days since 1970-01-01"
-            write (9003,*) "! warning: Cannot read time units attribute, assuming days since 1970-01-01"
+    status = nc_inq_varid_c(ncid, "time" // c_null_char, time_varid)
+    if (status == NC_NOERR) then
+        ! Try to read time units attribute
+        status = nc_inq_attlen_c(ncid, time_varid, "units" // c_null_char, att_len)
+        if (status == NC_NOERR .and. att_len > 0) then
+            ! Allocate space for the attribute (including null terminator)
+            if (att_len < 256) then
+                time_units_c = repeat(c_null_char, 257)
+                status = nc_get_att_text_c(ncid, time_varid, "units" // c_null_char, time_units_c)
+                if (status == NC_NOERR) then
+                    call c_to_f_string(time_units_c, time_units)
+                else
+                    time_units = "days since 1970-01-01 00:00:00"
+                    write (*,*) "! warning: Cannot read time units attribute, using default"
+                    write (9003,*) "! warning: Cannot read time units attribute, using default"
+                endif
+            else
+                time_units = "days since 1970-01-01 00:00:00"
+                write (*,*) "! warning: Time units attribute too long, using default"
+            endif
+        else
             time_units = "days since 1970-01-01 00:00:00"
+            write (*,*) "! warning: Cannot find time units attribute, using default"
+            write (9003,*) "! warning: Cannot find time units attribute, using default"
         endif
         
         ! Parse reference date from time units string
-        ! Expected format: "days since YYYY-MM-DD HH:MM:SS" or "days since YYYY-MM-DD"
         call parse_time_units(time_units, ref_year, ref_month, ref_day)
         
-        status = nf_get_var_real(ncid, time_varid, time_vals)
-        if (status == NF_NOERR) then
+        status = nc_get_var_float_c(ncid, time_varid, time_vals)
+        if (status == NC_NOERR) then
             if (ntime >= 1) then
-                ! Time is in "days since ref_date"
                 days_since_ref = int(time_vals(1))
-                
-                ! Calculate actual date from reference date + days offset
                 call add_days_to_date(ref_year, ref_month, ref_day, days_since_ref, year, month, day)
             endif
         else
-            write (*,*) "Error reading time data: ", nf_strerror(status)
-            write (9003,*) "Error reading time data: ", nf_strerror(status)
+            write (*,*) "! error reading time data, code: ", status
+            write (9003,*) "! error reading time data, code: ", status
             stop
         endif
     else
-        write (*,*) "WARNING: No time variable found in NetCDF"
-        write (9003,*) "WARNING: No time variable found in NetCDF"
+        write (*,*) "WARNING: No time variable found in NetCDF, code:", status
+        write (9003,*) "WARNING: No time variable found in NetCDF, code:", status
         stop
     endif
     
-    ! Precipitation
-    status = nf_inq_varid(ncid, "pcp", pcp_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, pcp_varid, pcp_data)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading precipitation: ", nf_strerror(status)
-            write (9003,*) "Error reading precipitation: ", nf_strerror(status)
-            stop
-        endif
-    else
-        write (*,*) "WARNING: No pcp variable found in NetCDF"
-        write (9003,*) "WARNING: No pcp variable found in NetCDF"
-    endif
-    
-    ! Temperature minimum
-    status = nf_inq_varid(ncid, "tmin", tmin_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, tmin_varid, tmin_data)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading tmin: ", nf_strerror(status)
-            write (9003,*) "Error reading tmin: ", nf_strerror(status)
-            stop
-        endif
-    else
-        write (*,*) "WARNING: No tmin variable found in NetCDF"
-        write (9003,*) "WARNING: No tmin variable found in NetCDF"
-    endif
-    
-    ! Temperature maximum  
-    status = nf_inq_varid(ncid, "tmax", tmax_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, tmax_varid, tmax_data)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading tmax: ", nf_strerror(status)
-            write (9003,*) "Error reading tmax: ", nf_strerror(status)
-            stop
-        endif
-    else
-        write (*,*) "WARNING: No tmax variable found in NetCDF"
-        write (9003,*) "WARNING: No tmax variable found in NetCDF"
-    endif
-    
-    ! Solar radiation
-    status = nf_inq_varid(ncid, "slr", slr_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, slr_varid, slr_data)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading slr: ", nf_strerror(status)
-            write (9003,*) "Error reading slr: ", nf_strerror(status)
-            stop
-        endif
-    else
-        write (*,*) "WARNING: No slr variable found in NetCDF"
-        write (9003,*) "WARNING: No slr variable found in NetCDF"
-    endif
-    
-    ! Relative humidity
-    status = nf_inq_varid(ncid, "hmd", hmd_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, hmd_varid, hmd_data)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading hmd: ", nf_strerror(status)
-            write (9003,*) "Error reading hmd: ", nf_strerror(status)
-            stop
-        endif
-    else
-        write (*,*) "WARNING: No hmd variable found in NetCDF"
-        write (9003,*) "WARNING: No hmd variable found in NetCDF"
-    endif
-    
-    ! Wind speed
-    status = nf_inq_varid(ncid, "wnd", wnd_varid)
-    if (status == NF_NOERR) then
-        status = nf_get_var_real(ncid, wnd_varid, wnd_data)
-        if (status /= NF_NOERR) then
-            write (*,*) "Error reading wnd: ", nf_strerror(status)
-            write (9003,*) "Error reading wnd: ", nf_strerror(status)
-            stop
-        endif
-    else
-        write (*,*) "WARNING: No wnd variable found in NetCDF"
-        write (9003,*) "WARNING: No wnd variable found in NetCDF"
-    endif
+    ! Read all climate variables
+    call read_climate_variable("pcp", pcp_varid, pcp_data, "precipitation")
+    call read_climate_variable("tmin", tmin_varid, tmin_data, "minimum temperature")
+    call read_climate_variable("tmax", tmax_varid, tmax_data, "maximum temperature")
+    call read_climate_variable("slr", slr_varid, slr_data, "solar radiation")
+    call read_climate_variable("hmd", hmd_varid, hmd_data, "humidity")
+    call read_climate_variable("wnd", wnd_varid, wnd_data, "wind speed")
 
     ! allocate and populate climate arrays
     allocate (pcp(0:db_mx%wst))
     allocate (pcp_n(db_mx%wst))
     allocate (tmp(0:db_mx%wst))
-    allocate (tmp_n(db_mx%wst))
+    allocate (tmp_n(db_mx%wst))  
     allocate (slr(0:db_mx%wst))
     allocate (slr_n(db_mx%wst))
     allocate (hmd(0:db_mx%wst))
@@ -290,9 +314,7 @@ subroutine cli_ncdf_meas
     db_mx%rhfiles = db_mx%wst
     db_mx%wndfiles = db_mx%wst
     
-    ! Set the climate file indices for each station based on station index
-    ! This is needed because NetCDF data is indexed by station, unlike traditional
-    ! files which use the search() function to map file names to indices
+    ! Set the climate file indices for each station
     do i = 1, db_mx%wst
         wst(i)%wco%pgage = i
         wst(i)%wco%tgage = i
@@ -301,6 +323,7 @@ subroutine cli_ncdf_meas
         wst(i)%wco%wgage = i
     end do
     
+    ! Populate station metadata and time series data
     do iwst = 1, db_mx%wst
         
         ! Find closest grid point to this station
@@ -319,19 +342,115 @@ subroutine cli_ncdf_meas
             end do
         end do
         
-        ! Set station names as "filenames" 
+        ! Set station names and metadata
+        call setup_station_metadata(iwst)
+        
+        ! Setup time series arrays
+        call setup_timeseries_arrays(iwst, ntime)
+        
+        ! Populate time series data
+        call populate_timeseries_data(iwst, target_lat_idx, target_lon_idx, ntime)
+        
+    end do
+    
+    ! Close NetCDF file
+    status = nc_close_c(ncid)
+    if (status /= NC_NOERR) then
+        write (*,*) "Warning: Error closing NetCDF file, code:", status
+    endif
+    
+    ! Clean up allocated arrays
+    deallocate(time_vals, lat_vals, lon_vals)
+    deallocate(pcp_data, tmin_data, tmax_data, slr_data, hmd_data, wnd_data)
+    
+    write(*,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
+    write(9003,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
+
+    return
+
+contains
+
+    ! Helper subroutine to convert Fortran string to C string
+    subroutine f_to_c_string(f_str, c_str)
+        character(len=*), intent(in) :: f_str
+        character(len=*, kind=c_char), intent(out) :: c_str
+        integer :: i, f_len
+        
+        f_len = len_trim(f_str)
+        do i = 1, f_len
+            c_str(i:i) = f_str(i:i)
+        end do
+        c_str(f_len+1:f_len+1) = c_null_char
+        
+    end subroutine f_to_c_string
+    
+    ! Helper subroutine to convert C string to Fortran string
+    subroutine c_to_f_string(c_str, f_str)
+        character(len=*, kind=c_char), intent(in) :: c_str
+        character(len=*), intent(out) :: f_str
+        integer :: i, c_len
+        
+        ! Find the null terminator
+        c_len = 0
+        do i = 1, len(c_str)
+            if (c_str(i:i) == c_null_char) then
+                c_len = i - 1
+                exit
+            endif
+        end do
+        
+        if (c_len == 0) c_len = len(c_str)
+        
+        ! Copy characters
+        do i = 1, min(c_len, len(f_str))
+            f_str(i:i) = c_str(i:i)
+        end do
+        
+        ! Pad with spaces if necessary
+        if (c_len < len(f_str)) then
+            f_str(c_len+1:) = ' '
+        endif
+        
+    end subroutine c_to_f_string
+
+    ! Helper subroutine to read a climate variable
+    subroutine read_climate_variable(var_name, var_id, var_data, description)
+        character(len=*), intent(in) :: var_name, description
+        integer(c_int), intent(out) :: var_id
+        real(c_float), dimension(:,:,:), intent(out) :: var_data
+        
+        status = nc_inq_varid_c(ncid, trim(var_name) // c_null_char, var_id)
+        if (status == NC_NOERR) then
+            status = nc_get_var_float_c(ncid, var_id, var_data)
+            if (status /= NC_NOERR) then
+                write (*,*) "! error reading ", description, ", code: ", status
+                write (9003,*) "! error reading ", description, ", code: ", status
+                stop
+            endif
+        else
+            write (*,*) "WARNING: No ", trim(var_name), " variable found in NetCDF, code:", status
+            write (9003,*) "WARNING: No ", trim(var_name), " variable found in NetCDF, code:", status
+            var_data = 0.0  ! Fill with zeros if variable not found
+        endif
+        
+    end subroutine read_climate_variable
+    
+    ! Helper subroutine to setup station metadata
+    subroutine setup_station_metadata(iwst)
+        integer, intent(in) :: iwst
+        
+        ! Set station names as "filenames"
         pcp_n(iwst) = wst(iwst)%name
         tmp_n(iwst) = wst(iwst)%name
         slr_n(iwst) = wst(iwst)%name 
         hmd_n(iwst) = wst(iwst)%name
         wnd_n(iwst) = wst(iwst)%name
         
-        ! Populate station metadata from wst and NetCDF grid
-        ! CRITICAL: Use station coordinates (not NetCDF grid) to match traditional method
+        ! Populate station metadata - use station coordinates (not NetCDF grid)
         pcp(iwst)%filename = wst(iwst)%name
-        pcp(iwst)%lat = wst(iwst)%lat      ! Use station coordinates, not NetCDF grid
-        pcp(iwst)%long = wst(iwst)%lon     ! Use station coordinates, not NetCDF grid
-        pcp(iwst)%elev = wst(iwst)%elev    ! Use station elevation
+        pcp(iwst)%lat = wst(iwst)%lat
+        pcp(iwst)%long = wst(iwst)%lon
+        pcp(iwst)%elev = wst(iwst)%elev
         
         ! Copy metadata to other climate arrays
         tmp(iwst)%filename = pcp(iwst)%filename
@@ -354,75 +473,47 @@ subroutine cli_ncdf_meas
         wnd(iwst)%long = pcp(iwst)%long
         wnd(iwst)%elev = pcp(iwst)%elev
         
-    end do
-
-    ! Step 2: Populate the actual time series data for each station
-    ! Similar to how cli_pmeas.f90 populates pcp(i)%ts(day, year)
+    end subroutine setup_station_metadata
     
-    do iwst = 1, db_mx%wst
+    ! Helper subroutine to setup time series arrays
+    subroutine setup_timeseries_arrays(iwst, ntime_total)
+        integer, intent(in) :: iwst, ntime_total
         
-        ! Find closest grid point to this station (recompute for each station)
-        min_dist = 999999.0
-        target_lat_idx = 1
-        target_lon_idx = 1
-        
-        do ilat = 1, nlat
-            do ilon = 1, nlon
-                dist = sqrt((lat_vals(ilat) - wst(iwst)%lat)**2 + (lon_vals(ilon) - wst(iwst)%lon)**2)
-                if (dist < min_dist) then
-                    min_dist = dist
-                    target_lat_idx = ilat
-                    target_lon_idx = ilon
-                endif
-            end do
-        end do
-        
-        ! Calculate number of years from NetCDF time dimension
-        ! Assume daily data, so nyears = ntime / 365 (approximately)
-        ! For more accurate calculation, we'd need to parse the actual dates
-        pcp(iwst)%nbyr = max(1, ntime / 365)
+        ! Calculate number of years (approximate for daily data)
+        pcp(iwst)%nbyr = max(1, ntime_total / 365)
         tmp(iwst)%nbyr = pcp(iwst)%nbyr
         slr(iwst)%nbyr = pcp(iwst)%nbyr
         hmd(iwst)%nbyr = pcp(iwst)%nbyr
         wnd(iwst)%nbyr = pcp(iwst)%nbyr
         
-        ! Set timestep (0 = daily, >0 = sub-daily)
-        pcp(iwst)%tstep = 0  ! Assume daily for now
+        ! Set timestep (0 = daily)
+        pcp(iwst)%tstep = 0
         tmp(iwst)%tstep = 0
         slr(iwst)%tstep = 0
         hmd(iwst)%tstep = 0
         wnd(iwst)%tstep = 0
         
-        ! Initialize days_gen counter (like traditional method)
+        ! Initialize counters
         pcp(iwst)%days_gen = 0
         tmp(iwst)%days_gen = 0
         slr(iwst)%days_gen = 0
         hmd(iwst)%days_gen = 0
         wnd(iwst)%days_gen = 0
         
-        ! Set start and end years (approximate)
+        ! Set start and end years
         pcp(iwst)%start_yr = time%yrc
         pcp(iwst)%end_yr = time%yrc + pcp(iwst)%nbyr - 1
         pcp(iwst)%start_day = 1
         
-        ! Calculate proper end_day based on leap year for last year (like traditional method)
+        ! Calculate end_day based on leap year for last year
         actual_year = pcp(iwst)%end_yr
-        ! Use proper leap year calculation (same as time_control.f90)
-        if (Mod(actual_year,4) == 0) then
-          if (Mod(actual_year,100) == 0) then
-            if (Mod(actual_year,400) == 0) then
-              pcp(iwst)%end_day = 366  ! Last day of leap year
-            else
-              pcp(iwst)%end_day = 365  ! Century year, not leap
-            end if
-          else
-            pcp(iwst)%end_day = 366  ! Last day of leap year
-          end if
+        if (is_leap_year(actual_year)) then
+            pcp(iwst)%end_day = 366
         else
-          pcp(iwst)%end_day = 365  ! Last day of non-leap year
+            pcp(iwst)%end_day = 365
         endif
         
-        ! Calculate yrs_start correctly (like traditional method)
+        ! Calculate yrs_start
         if (pcp(iwst)%start_yr > time%yrc) then
             pcp(iwst)%yrs_start = pcp(iwst)%start_yr - time%yrc
         else
@@ -456,52 +547,37 @@ subroutine cli_ncdf_meas
         
         ! Allocate time series arrays
         allocate (pcp(iwst)%ts(366, pcp(iwst)%nbyr), source = 0.)
-        allocate (tmp(iwst)%ts(366, tmp(iwst)%nbyr), source = 0.)   ! ts for TMAX (maximum temperature)
-        allocate (tmp(iwst)%ts2(366, tmp(iwst)%nbyr), source = 0.) ! ts2 for TMIN (minimum temperature)
+        allocate (tmp(iwst)%ts(366, tmp(iwst)%nbyr), source = 0.)   ! ts for TMAX
+        allocate (tmp(iwst)%ts2(366, tmp(iwst)%nbyr), source = 0.) ! ts2 for TMIN
         allocate (slr(iwst)%ts(366, slr(iwst)%nbyr), source = 0.)
         allocate (hmd(iwst)%ts(366, hmd(iwst)%nbyr), source = 0.)
         allocate (wnd(iwst)%ts(366, wnd(iwst)%nbyr), source = 0.)
         
-        ! Populate the time series data from NetCDF arrays
-        ! Map NetCDF time index to (day, year) indices
-        ! CRITICAL: Use Julian day indexing (1-366) like traditional method
+    end subroutine setup_timeseries_arrays
+    
+    ! Helper subroutine to populate time series data
+    subroutine populate_timeseries_data(iwst, target_lat_idx, target_lon_idx, ntime_total)
+        integer, intent(in) :: iwst, target_lat_idx, target_lon_idx, ntime_total
+        
         itime = 1
         do iyear = 1, pcp(iwst)%nbyr
-            ! Handle leap years properly (using traditional method logic)
-            ! Calculate actual year for this data year
+            ! Calculate actual year for leap year check
             actual_year = pcp(iwst)%start_yr + iyear - 1
-            days_in_year_loop = 365
-            
-            ! Check for leap year (same logic as time_control.f90)
-            if (Mod(actual_year,4) == 0) then
-              if (Mod(actual_year,100) == 0) then
-                if (Mod(actual_year,400) == 0) then
-                  days_in_year_loop = 366  ! Leap year
-                else
-                  days_in_year_loop = 365  ! Century year, not leap
-                end if
-              else
-                days_in_year_loop = 366  ! Leap year
-              end if
+            if (is_leap_year(actual_year)) then
+                days_in_year_loop = 366
             else
-              days_in_year_loop = 365  ! Not a leap year
+                days_in_year_loop = 365
             endif
             
-            do iday = 1, days_in_year_loop  ! Use correct number of days for the year
-                if (itime <= ntime) then
-                    ! IMPORTANT: Use Julian day (iday) directly, not converted day
-                    ! Traditional method: pcp(i)%ts(istep, iyrs) where istep is Julian day
-                    ! NetCDF method: pcp(iwst)%ts(iday, iyear) where iday is Julian day
-                    
-                    ! Precipitation - use correct NetCDF indexing (lon, lat, time)
-                    ! Apply station scaling factor (like traditional method)
+            do iday = 1, days_in_year_loop
+                if (itime <= ntime_total) then
+                    ! Precipitation - apply station scaling factor
                     if (allocated(pcp_data)) then
                         pcp(iwst)%ts(iday, iyear) = pcp_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%pcp_factor
                         if (pcp(iwst)%ts(iday, iyear) < 0.0) pcp(iwst)%ts(iday, iyear) = 0.0
                     endif
                     
                     ! Temperature - populate both ts (TMAX) and ts2 (TMIN)
-                    ! Apply station scaling factors (like traditional method)
                     if (allocated(tmax_data)) then
                         tmp(iwst)%ts(iday, iyear) = tmax_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%tmax_factor
                     endif
@@ -531,28 +607,13 @@ subroutine cli_ncdf_meas
                     
                     itime = itime + 1
                 else
-                    ! No more NetCDF data available, fill with zeros or last value
+                    ! No more NetCDF data available
                     exit
                 endif
             end do
         end do
         
-    end do
-    
-    
-    ! close netcdf file
-    status = nf_close(ncid)
-    
-    ! clean up allocated arrays
-    deallocate(time_vals, lat_vals, lon_vals)
-    deallocate(pcp_data, tmin_data, tmax_data, slr_data, hmd_data, wnd_data)
-    
-    write(*,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
-    write(9003,'(A,I0,A)') " successfully populated time series for ", db_mx%wst, " stations"
-
-    return
-
-contains
+    end subroutine populate_timeseries_data
 
     ! Helper subroutine to parse time units string
     subroutine parse_time_units(units_str, ref_yr, ref_mo, ref_dy)
