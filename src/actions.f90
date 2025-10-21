@@ -162,6 +162,18 @@
                 end if
               end if
             endif
+            
+          ! Jose 2025 - add for recording reservoir irrigation demand (future plan is to fully integrate in water allocation module)
+          case ("res_irr_dmd")
+            ipl = 1
+            j = ob_cur                      ! hru number
+
+            !select object type
+            iob = d_tbl%act(iac)%ob_num
+            
+            irrig(j)%demand         = d_tbl%act(iac)%const * hru(j)%area_ha * 10.       ! m3 = mm * ha * 10.
+            res_ob(iob)%irrig_track = res_ob(iob)%irrig_track + 1                       ! Tracker to update irrigation demand
+            res_ob(iob)%d_irrig_day = irrig(j)%demand
 
           !irrigate - hru action
           case ("irrigate")
@@ -238,8 +250,6 @@
               rto1 = (1. - rto)
               irrig(j)%water = rto * res(iob)                           ! organics in irrigation water
               res(iob) = rto1 * res(iob)                                ! remainder stays in reservoir
-              res_ob(iob)%irrig_track = res_ob(iob)%irrig_track + 1     ! Tracker to update irrigation demand
-              res_ob(iob)%d_irrig_day = irrig(j)%demand
               !cs_irr(iob) = rto * res_water(iob)                       ! constituents in irrigation water
               !res_water(iob) = rto1 * res_water(iob)                   ! remainder stays in reservoir
               
