@@ -53,10 +53,6 @@
       integer :: idp = 0                   !         |
       integer :: istr = 0                  !         |
       integer :: istr1 = 0                 !         |
-      integer :: iob_out = 0
-      integer :: inhyd = 0                 !         |
-      integer :: ihyd_in = 0               !         |
-      integer :: icon = 0                  !         |
       integer :: iplt_bsn = 0
       integer :: irrop = 0                 !         |
       integer :: igr = 0
@@ -70,7 +66,6 @@
       integer :: idb = 0
       integer :: imallo = 0
       integer :: idmd = 0
-      integer :: irec = 0
       integer :: iplt = 0
       integer :: num_plts_cur = 0
       integer :: hru_rcv
@@ -79,7 +74,6 @@
       real :: frt_kg = 0.
       real :: harveff = 0.
       real :: wur = 0.                     !         |
-      real :: frac = 0.                    !         |
       real :: rto = 0.                     !         |
       real :: rto1 = 0.                    !         |
       real :: pest_kg = 0.                 !kg/ha    |amount of pesticide applied 
@@ -92,7 +86,7 @@
       real :: stor_m3 = 0.
       character(len=1) :: action = ""      !         |
       character(len=40) :: lu_prev = ""    !         |
-
+      
       do iac = 1, d_tbl%acts
         action = "n"
         do ial = 1, d_tbl%alts
@@ -162,6 +156,18 @@
                 end if
               end if
             endif
+            
+          ! Jose 2025 - add for recording reservoir irrigation demand (future plan is to fully integrate in water allocation module)
+          case ("res_irr_dmd")
+            ipl = 1
+            j = ob_cur                      ! hru number
+
+            !select object type
+            iob = d_tbl%act(iac)%ob_num
+            
+            irrig(j)%demand         = d_tbl%act(iac)%const * hru(j)%area_ha * 10.       ! m3 = mm * ha * 10.
+            res_ob(iob)%irrig_track = res_ob(iob)%irrig_track + 1                       ! Tracker to update irrigation demand
+            res_ob(iob)%d_irrig_day = irrig(j)%demand
 
           !! Jose 2025 - add for recording reservoir irrigation demand (future plan is to fully integrate in water allocation module)
           case ("res_irr_dmd")
@@ -440,7 +446,7 @@
                   call mgt_harvgrain (j, ipl, iharvop)
                 case ("residue")
                   harveff = d_tbl%act(iac)%const
-                  call mgt_harvresidue (j, harveff)
+                  call mgt_harvresidue (j, harveff, iharvop)
                 case ("tree")
                   call mgt_harvbiomass (j, ipl, iharvop)
                 case ("tuber")
@@ -556,7 +562,7 @@
                   call mgt_harvgrain (j, ipl, iharvop)
                 case ("residue")
                   harveff = d_tbl%act(iac)%const
-                  call mgt_harvresidue (j, harveff)
+                  call mgt_harvresidue (j, harveff, iharvop)
                 case ("tree")
                 case ("tuber")
                   call mgt_harvtuber (j, ipl, iharvop)
