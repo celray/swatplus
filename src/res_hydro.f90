@@ -310,7 +310,7 @@
                 so    = dtbl_res(id)%act(iac)%const * pvol_m3                                   ! Inactive storage (% of Pvol)
                 smax  = pvol_m3                                                                 ! Max lake storage coefficient (% of Pvol) - defined on dtl
                 sto   = vol - so                                                                ! Current effective storage
-                kr    = dtbl_res(id)%act(iac)%const2                                            !0.01 ! 1/d  Release coefficient
+                kr    = dtbl_res(id)%act(iac)%const2                                            ! 0.01 ! 1/d  Release coefficient
                 alpha = 1.50                                                                    ! Exponent
               
                 ht2%flo = ht2%flo + ((sto/(smax - so)) ** alpha) * sto * kr

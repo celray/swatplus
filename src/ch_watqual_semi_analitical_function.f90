@@ -40,12 +40,28 @@
       real :: term2 = 0.
       real :: yy = 0.
       real :: wq_semianalyt
+      real :: exp_arg = 0.
 
       help1 = 1. / tres - prock
-      help2 = exp(-tdel * help1)
+
+      exp_arg = -tdel * help1
+      
+      if (exp_arg < -20.0) then
+            help2 = 0.0
+      else
+            help2 = exp(exp_arg)
+      end if
+
+      !help2 = exp(-tdel * help1) Arithmetic exception -> underflow when help1 is a large positive
       help3 = cint / tres + term_m
       help4 = help3 / help1
-      term1 = cprev * help2
+
+      if (help2 < 1.0e-10 .or. cprev < 1.0e-10)  then
+            term1 = 0.0
+      else
+            term1 = cprev * help2
+      end if
+      ! term1 = cprev * help2
       term2 = help4 * (1. - help2)
       yy = term1 + term2
       wq_semianalyt = term1 + term2

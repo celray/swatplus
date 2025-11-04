@@ -38,7 +38,7 @@
         real, dimension(:), allocatable :: I_mon_past               !m3     |Monthly mean inflow for the last N*12 months
         real :: I_mean  = 0.                                        !m3     |Annual mean inflow for the last N years
         real :: S_ini   = 0.                                        !m3     |Storage at the beginning of the operational year
-        integer :: N_memory   = 2                                   !m3     |Number of years in the memory (by default 1 year)
+        integer :: N_memory   = 5                                   !m3     |Number of years in the memory (by default 1 year)
         real, dimension(:), allocatable :: daily_inflow_array       !m3     |Array to store daily inflow for the month
         real :: c_ratio   = 0.51                                    !       |Capacity ratio
         real :: d_mean    = 0.0                                     !m3     |Annual mean irrigation demand
