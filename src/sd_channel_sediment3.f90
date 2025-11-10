@@ -56,8 +56,6 @@
       real :: v_vc = 0.
       real :: m_exhaust = 0.
       real :: dur_scale = 0.
-      real :: exp_arg = 0
-      real :: safe_exp = 0
 
 
       ich = isdch
@@ -181,16 +179,7 @@
       if (vel_rch > vel_cr) then
         !! bank erosion m/yr
         dur_scale = 0.000087 * (ob(icmd)%area_ha / 100.) ** (-0.0817)
-        ! v_vc = dur_scale * sd_ch(ich)%chw * (1. / (1. + exp(-4. * (vel_rch / vel_cr - 1.)))) Underflow issues with gfortran
-
-        exp_arg = -4. * (vel_rch / vel_cr - 1.)
-        if (exp_arg < -20.0) then
-            safe_exp = 0.0
-        else
-            safe_exp = exp(exp_arg)
-        end if
-
-        v_vc = dur_scale * sd_ch(ich)%chw * (1. / (1. + safe_exp))
+        v_vc = dur_scale * sd_ch(ich)%chw * (1. / (1. + exp(-4. * (vel_rch / vel_cr - 1.)))) Underflow issues with gfortran
         m_exhaust = 0.0002 * sd_ch(ich)%chw
         ebank_m = 1. / (1. / v_vc + 1. / m_exhaust)
         !ebank_m = 0.0001 * sd_ch(ich)%chw * (1. / (1. + exp(-4. * (vel_rch / vel_cr - 1.))) - 0.5)
