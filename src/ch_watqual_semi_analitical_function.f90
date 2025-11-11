@@ -23,6 +23,7 @@
 !!    Intrinsic: Exp
  
 !!    ~ ~ ~ ~ ~ ~ END SPECIFICATIONS ~ ~ ~ ~ ~ ~
+      use utils
 
       implicit none
  
@@ -42,7 +43,8 @@
       real :: wq_semianalyt
 
       help1 = 1. / tres - prock
-      help2 = exp(-tdel * help1) !GNU: Arithmetic exception -> underflow when help1 is a large positive
+      help2 = exp_w(-tdel * help1)
+
       help3 = cint / tres + term_m
       help4 = help3 / help1
 
@@ -84,6 +86,7 @@
 !!    Intrinsic: Exp
  
 !!    ~ ~ ~ ~ ~ ~ END SPECIFICATIONS ~ ~ ~ ~ ~ ~
+      use utils
 
       real, intent (in) :: t1
       real, intent (in) :: t2
@@ -100,7 +103,7 @@
       
       h1 = wq_semianalyt (t1, t2, 0., 0., c1, c2)
       h2 = wq_semianalyt (t1, t2, 0., tk, c1, c2)
-      help = exp(-t2 / t1)
+      help = exp_w(-t2 / t1)
          
       tm = (h2 - c1 * help) / (t1 * (1. - help)) - c2 / t1
       h3 = wq_semianalyt (t1, t2, tm, 0., c1, c2)
