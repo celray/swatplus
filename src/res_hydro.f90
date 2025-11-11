@@ -315,8 +315,8 @@
               
                 ht2%flo = ht2%flo + ((sto/(smax - so)) ** alpha) * sto * kr
 
-            case ("hanazaki_06_gen")
-                !! Jose T | Time-variant parametric scheme (Hanazaki et al. 2006) for non-irrigation reservoirs
+            case ("nonirr-h06")
+                !! Jose T | Time-variant parametric scheme [h06] (Hanazaki et al. 2006) for non-irrigation reservoirs
                 !! release as non-irrigation reservoir
                 smax                 = max(pvol_m3,evol_m3)
                 alpha                = dtbl_res(id)%act(iac)%const
@@ -351,7 +351,7 @@
                     ht2%flo = er*target_rel*(2*res_ob(jres)%c_ratio)**2 + (1-(2*res_ob(jres)%c_ratio)**2)*I_mon
                 end if
                     
-            case ("hanazaki_06_irr")
+            case ("irr-h06")
                 !! Jose T | Time-variant parametric scheme (Hanazaki et al. 2006) for irrigation reservoirs
                 !! release as irrigation reservoir
                 smax                 = max(pvol_m3,evol_m3)
@@ -392,7 +392,7 @@
                     ht2%flo = er*target_rel*(2*res_ob(jres)%c_ratio)**2 + (1-(2*res_ob(jres)%c_ratio)**2)*I_mon
                 end if
                     
-            case ("hype_hp")
+            case ("hydrop")
                 !! HYPE Model Hydroelectric Power Reservoir release scheme (Scheme by Arheimer et al, 2019 and implementation by Gahari et al, 2024)
                 a_amp       = dtbl_res(id)%act(iac)%const
                 b_phase     = dtbl_res(id)%act(iac)%const2
