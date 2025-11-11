@@ -304,7 +304,7 @@
               end select
               ht2%flo = max(0.,ht2%flo)
 
-            case ("doell")
+            case ("natlake")
                 !! Jose T | release as natural lake based on Doell (2003) formilation
                 
                 so    = dtbl_res(id)%act(iac)%const * pvol_m3                                   ! Inactive storage (% of Pvol)
