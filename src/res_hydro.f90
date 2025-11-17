@@ -47,19 +47,12 @@
       real :: alpha             = 0.                                          !none       |Exponent             
       
       !! Jose T 2025 |  Hanazaki method
-      integer :: dom            = 0                                           !           |Day of month
-      integer :: mon            = 0                                           !           |Month of year
-      integer :: end_of_mo      = 0                                           !           |End of month flag
-      integer :: n_days         = 0                                           !           |Number of days in current month
-      real    :: daily_inflow   = 0.                                          !m3         |Daily inflow from the past day
-      real, dimension(:), allocatable :: temp_array                           !           |Temporary to store new values
       real :: er                = 1.00                                        !           |Release rate
       real :: I_mon             = 0.00                                        !m3         |Monthly inflow
       real :: d_mon             = 0.00                                        !m3         |Monthly demand
       real :: beta              = 0.10                                        !none       |Environmental flow req coefficient
       real :: target_rel        = 0.                                          !m3         |Target release
-      real :: daily_demand      = 0.                                          !m3         |Daily irrigation demand
-      integer :: irrig_track_b  = 0                                           !none       |Tracker to update daily irrigation demand
+
       
       !! Jose T 2025 |  HYPE model for HP method
       real :: pi                = 3.14159265358979323846                      !Pi :)
@@ -70,6 +63,14 @@
       real :: F_sin             = 0.                                          !none       |Seasonal demand factor
       real :: F_lin             = 0.                                           !none       |Storage limiting factor
       
+      integer :: dom            = 0                                           !           |Day of month
+      integer :: mon            = 0                                           !           |Month of year
+      integer :: end_of_mo      = 0                                           !           |End of month flag
+
+      dom          = time%day_mo
+      mon          = time%mo
+      end_of_mo    = time%end_mo
+        
       !! store initial values
       vol = wbody%flo
       nstep = 1
@@ -81,67 +82,6 @@
       end if
       
       do tstep = 1, nstep
-
-        !! Retrospective information -> Inflow and irrigation demand memory of the reservoir   
-        dom          = time%day_mo
-        mon          = time%mo
-        end_of_mo    = time%end_mo
-        daily_inflow = ht1%flo
-            
-        if (irrig_track_b == res_ob(jres)%irrig_track) then
-            daily_demand = 0
-                
-        else
-            irrig_track_b = res_ob(jres)%irrig_track
-            daily_demand = res_ob(jres)%d_irrig_day
-                
-        end if
-            
-        !! Store values in daily inflow array for the month and reset if month has ended
-        if (dom == 1) then
-            if (allocated(res_ob(jres)%daily_inflow_array)) then                                    ! Deallocate array to start over
-                deallocate(res_ob(jres)%daily_inflow_array) 
-            end if
-                    
-            if (allocated(res_ob(jres)%daily_demand_array)) then                                    ! Deallocate array to start over
-                deallocate(res_ob(jres)%daily_demand_array) 
-            end if
-                    
-            allocate(res_ob(jres)%daily_inflow_array(1))         
-            res_ob(jres)%daily_inflow_array(1) = daily_inflow                                       ! Store first inflow of the month
-                    
-            allocate(res_ob(jres)%daily_demand_array(1))         
-            res_ob(jres)%daily_demand_array(1) = daily_demand                                       ! Store first irrigation demand of the month                   
-                
-        else
-        !! Append inflow of current day
-            n_days = size(res_ob(jres)%daily_inflow_array)
-                
-            allocate(temp_array(n_days+1))
-            temp_array(1:n_days)   = res_ob(jres)%daily_inflow_array(1:n_days) 
-            temp_array(n_days +1)  = daily_inflow
-                
-            call move_alloc(temp_array, res_ob(jres)%daily_inflow_array)                            !Replace original array with move_alloc
-                
-        !! Append irrigaton demand of current day
-            allocate(temp_array(n_days+1))
-            temp_array(1:n_days)   = res_ob(jres)%daily_demand_array(1:n_days) 
-            temp_array(n_days +1)  = daily_demand
-                
-            call move_alloc(temp_array, res_ob(jres)%daily_demand_array)                            !Replace original array with move_alloc
-                       
-        end if
-        !! Get mean and store in reservoir's memory if end of month
-        if (end_of_mo == 1) then
-            ! Shift rolling window to the left
-            res_ob(jres)%I_mon_past(1:12*(res_ob(jres)%N_memory)-1)     = res_ob(jres)%I_mon_past(2:12*(res_ob(jres)%N_memory))
-            res_ob(jres)%I_mon_past(12*(res_ob(jres)%N_memory))         = sum(res_ob(jres)%daily_inflow_array) / real(size(res_ob(jres)%daily_inflow_array), kind=8)
-                    
-            ! Do the same for irrigation
-            res_ob(jres)%d_mon_past(1:12*(res_ob(jres)%N_memory)-1)     = res_ob(jres)%d_mon_past(2:12*(res_ob(jres)%N_memory))
-            res_ob(jres)%d_mon_past(12*(res_ob(jres)%N_memory))         = sum(res_ob(jres)%daily_demand_array) / real(size(res_ob(jres)%daily_demand_array), kind=8)
-                    
-        end if 
 
         !calc release from decision table
         do iac = 1, d_tbl%acts
