@@ -4,6 +4,9 @@
       use basin_module
       use aquifer_module
       use hydrograph_module, only : ob, sp_ob1
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
             
@@ -19,10 +22,17 @@
         !! daily print - AQUIFER
          if (pco%day_print == "y" .and. pco%int_day_cur == pco%int_day) then
           if (pco%aqu%d == "y") then
-            write (2520,100) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
-            if (pco%csvout == "y") then
-              write (2524,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
+            if (pco%textout == "y") then
+              write (2520,100) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
+              if (pco%csvout == "y") then
+                write (2524,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
+              end if
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_aquifer("d", time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq))
+            end if
+#endif
           end if
         end if
 
@@ -34,10 +44,17 @@
           aqu_m(iaq)%no3_st = aqu_m(iaq)%no3_st / const
           aqu_y(iaq) = aqu_y(iaq) + aqu_m(iaq)
           if (pco%aqu%m == "y") then
-            write (2521,100)  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
-            if (pco%csvout == "y") then
-              write (2525,'(*(G0.3,:","))')  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
-            endif
+            if (pco%textout == "y") then
+              write (2521,100)  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
+              if (pco%csvout == "y") then
+                write (2525,'(*(G0.3,:","))')  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
+              endif
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_aquifer("m", time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq))
+            end if
+#endif
           end if
           aqu_m(iaq) = aquz
         end if
@@ -49,10 +66,17 @@
           aqu_y(iaq)%no3_st = aqu_y(iaq)%no3_st / 12.
           aqu_a(iaq) = aqu_a(iaq) + aqu_y(iaq)
           if (pco%aqu%y == "y") then
-            write (2522,102) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq)
-            if (pco%csvout == "y") then
-              write (2526,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq) 
+            if (pco%textout == "y") then
+              write (2522,102) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq)
+              if (pco%csvout == "y") then
+                write (2526,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq) 
+              end if
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_aquifer("y", time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq))
+            end if
+#endif
           end if
           !! zero yearly variables        
           aqu_y(iaq) = aquz
@@ -61,10 +85,17 @@
       !! average annual print - AQUIFER
       if (time%end_sim == 1 .and. pco%aqu%a == "y") then
         aqu_a(iaq) = aqu_a(iaq) / time%yrs_prt
-        write (2523,102) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)
-        if (pco%csvout == "y") then 
-          write (2527,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)  
-        end if 
+        if (pco%textout == "y") then
+          write (2523,102) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)
+          if (pco%csvout == "y") then 
+            write (2527,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)  
+          end if 
+        end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_aquifer("a", time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq))
+        end if
+#endif
       end if
       
       return

@@ -7,9 +7,11 @@
       implicit none
        
       character (len=500) :: header = "" !              |header of file
+      character (len=500) :: line = ""   !              |line buffer for backwards compat parsing
       character (len=80) :: titldum = "" !              |title of file
       character (len=16) :: name = ""  !              |name
       integer :: eof = 0               !              |end of file
+      integer :: eof2 = 0              !              |secondary iostat for parsing
       logical :: i_exist               !              |check to determine if file exists
       integer :: ii = 0                !none          |counter
       integer :: result
@@ -38,11 +40,20 @@
         else
           allocate (pco%aa_yrs(1), source = 0)
         end if
-     !! read database output
+     !! read database output (with backwards compatibility for sqliteout and textout)
         read (107,*,iostat=eof) header
         if (eof < 0) exit
-        read (107,*,iostat=eof) pco%csvout, pco%use_obj_labels, pco%cdfout
+        !! Try reading new format with 5 fields first, fallback to old 3-field format
+        read (107,'(A)',iostat=eof) line
         if (eof < 0) exit
+        !! Attempt to parse new format: csvout, use_obj_labels, cdfout, sqliteout, textout
+        read (line,*,iostat=eof2) pco%csvout, pco%use_obj_labels, pco%cdfout, pco%sqliteout, pco%textout
+        if (eof2 /= 0) then
+          !! Fallback: old format with 3 fields - use defaults for new options
+          read (line,*,iostat=eof) pco%csvout, pco%use_obj_labels, pco%cdfout
+          pco%sqliteout = "n"  !! default: no SQLite output
+          pco%textout = "y"    !! default: yes text output (backwards compatible)
+        end if
         
      !! read other output
         read (107,*,iostat=eof) header

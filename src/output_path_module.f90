@@ -143,7 +143,9 @@
       
       !! Open an output file with proper path handling
       !! This is a convenience wrapper that prepends out_path if set
+      !! For .txt files, respects the textout flag from print.prt
       subroutine open_output_file(iunit, filename, recl_val)
+      use basin_module, only : pco
       
       implicit none
       
@@ -151,6 +153,37 @@
       character(len=*), intent(in) :: filename       !! output filename
       integer, intent(in), optional :: recl_val      !! record length (optional)
       character(len=512) :: full_path
+      integer :: fname_len
+      character(len=32) :: os_env
+      character(len=16) :: null_device
+      integer :: stat
+      logical :: is_windows
+      
+      !! Check if this is a .txt file and textout is disabled
+      fname_len = len_trim(filename)
+      if (fname_len >= 4) then
+        if (filename(fname_len-3:fname_len) == ".txt" .and. pco%textout /= "y") then
+          !! Open to null device instead of returning (prevents fort.* files)
+          is_windows = .false.
+          call get_environment_variable("OS", os_env, status=stat)
+          if (stat == 0 .and. index(os_env, "Windows") > 0) then
+            is_windows = .true.
+          end if
+          
+          if (is_windows) then
+            null_device = "NUL"
+          else
+            null_device = "/dev/null"
+          end if
+          
+          if (present(recl_val)) then
+            open (iunit, file=trim(null_device), recl=recl_val, status='old')
+          else
+            open (iunit, file=trim(null_device), status='old')
+          end if
+          return
+        end if
+      end if
       
       !! Get full path
       full_path = get_output_filename(filename)
@@ -164,5 +197,37 @@
       
       return
       end subroutine open_output_file
+      
+      !! Open a text output file only if textout is enabled
+      !! Returns .true. if file was opened, .false. otherwise
+      function open_text_output_file(iunit, filename, recl_val, textout_flag) result(opened)
+      
+      implicit none
+      
+      integer, intent(in) :: iunit                   !! unit number
+      character(len=*), intent(in) :: filename       !! output filename
+      integer, intent(in), optional :: recl_val      !! record length (optional)
+      character(len=*), intent(in) :: textout_flag   !! textout flag ("y" or "n")
+      logical :: opened
+      character(len=512) :: full_path
+      
+      opened = .false.
+      
+      !! Only open if textout is enabled
+      if (textout_flag /= "y") return
+      
+      !! Get full path
+      full_path = get_output_filename(filename)
+      
+      !! Open with or without recl
+      if (present(recl_val)) then
+        open (iunit, file=trim(full_path), recl=recl_val)
+      else
+        open (iunit, file=trim(full_path))
+      end if
+      
+      opened = .true.
+      return
+      end function open_text_output_file
       
       end module output_path_module

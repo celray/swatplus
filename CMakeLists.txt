@@ -103,6 +103,41 @@ set(CMAKE_Fortran_FLAGS_DEBUG   "${CMAKE_Fortran_FLAGS_DEBUG} ${fdebug}")
 set(CMAKE_Fortran_FLAGS_RELEASE "${frelease}")
 
 #############################################################################
+# SQLite3 Support (optional)
+option(ENABLE_SQLITE "Enable SQLite output support" OFF)
+
+if(ENABLE_SQLITE)
+    # Find SQLite3 library
+    find_library(SQLITE3_LIBRARY NAMES sqlite3 libsqlite3
+        PATHS
+        /usr/lib
+        /usr/local/lib
+        /opt/local/lib
+        "C:/sqlite"
+        "C:/Program Files/sqlite"
+        "$ENV{SQLITE3_DIR}/lib"
+    )
+    
+    find_path(SQLITE3_INCLUDE_DIR sqlite3.h
+        PATHS
+        /usr/include
+        /usr/local/include
+        /opt/local/include
+        "C:/sqlite"
+        "C:/Program Files/sqlite"
+        "$ENV{SQLITE3_DIR}/include"
+    )
+    
+    if(SQLITE3_LIBRARY)
+        message(STATUS "SQLite3 found: ${SQLITE3_LIBRARY}")
+        add_definitions(-DSQLITE_ENABLED)
+    else()
+        message(WARNING "SQLite3 library not found. SQLite output will be disabled.")
+        set(ENABLE_SQLITE OFF)
+    endif()
+endif()
+
+#############################################################################
 # Build
 # list (SORT _variableNames)
 # foreach (_variableName ${_variableNames})
@@ -130,6 +165,12 @@ endif()
 
 file(GLOB sources src/*.f90)
 add_executable(${SWATPLUS_EXE} ${sources})
+
+# Link SQLite3 if enabled
+if(ENABLE_SQLITE AND SQLITE3_LIBRARY)
+    target_link_libraries(${SWATPLUS_EXE} ${SQLITE3_LIBRARY})
+    target_include_directories(${SWATPLUS_EXE} PRIVATE ${SQLITE3_INCLUDE_DIR})
+endif()
 
 #############################################################################
 # Install
@@ -167,6 +208,10 @@ message( "-- PROJECT_DIR        ${PROJECT_SOURCE_DIR}")
 message( "-- BINARY_DIR         ${PROJECT_BINARY_DIR}")
 message( "-- Install Prefix     ${CMAKE_INSTALL_PREFIX}")
 message( "-- Executable         ${SWATPLUS_EXE}, rev/tag: ${SWAT_VERSION}")
+message( "-- SQLite Support     ${ENABLE_SQLITE}")
+if(ENABLE_SQLITE AND SQLITE3_LIBRARY)
+    message( "-- SQLite3 Library    ${SQLITE3_LIBRARY}")
+endif()
 message( "-- FORD project       ${PROJECT_SOURCE_DIR}/ford.md")
 message( "-- Test Data Dir      ${ref_dir}")
 message( "--  Abs Error         ${aerr}")

@@ -18,11 +18,13 @@
       if (sp_ob%hru > 0) then
 !!!  HRU - Water balance
         if (pco%wb_hru%d == "y") then
-          call open_output_file(2000, "hru_wb_day.txt", 1500)
-          write (2000,*)  bsn%name, prog
-          write (2000,*) wb_hdr  !! hru
-          write (2000,*) wb_hdr_units
-          write (9000,*) "HRU                       hru_wb_day.txt"
+          if (pco%textout == "y") then
+            call open_output_file(2000, "hru_wb_day.txt", 1500)
+            write (2000,*)  bsn%name, prog
+            write (2000,*) wb_hdr  !! hru
+            write (2000,*) wb_hdr_units
+            write (9000,*) "HRU                       hru_wb_day.txt"
+          end if
           !write (9000,*) "HRU                 waterbal_day_hru.txt"
             if (pco%csvout == "y") then
               call open_output_file(2004, "hru_wb_day.csv", 1500)
@@ -34,12 +36,14 @@
             end if 
         endif
  
-        if (pco%wb_hru%m == "y") then 
-          call open_output_file(2001, "hru_wb_mon.txt", 1500)
-          write (2001,*)  bsn%name, prog
-          write (2001,*) wb_hdr   !! hru
+        if (pco%wb_hru%m == "y") then
+          if (pco%textout == "y") then
+            call open_output_file(2001, "hru_wb_mon.txt", 1500)
+            write (2001,*)  bsn%name, prog
+            write (2001,*) wb_hdr   !! hru
           write (2001,*) wb_hdr_units
            write (9000,*) "HRU                       hru_wb_mon.txt"
+          end if
           !write (9000,*) "HRU                 waterbal_mon_hru.txt"
           if (pco%csvout == "y") then
             call open_output_file(2005, "hru_wb_mon.csv", 1500)

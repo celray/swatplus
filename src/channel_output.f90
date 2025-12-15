@@ -5,6 +5,9 @@
       use hydrograph_module, only : ob, sp_ob1
       use channel_module
       use climate_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -26,10 +29,17 @@
 !!!!! daily print
        if (pco%day_print == "y" .and. pco%int_day_cur == pco%int_day) then
         if (pco%chan%d == "y") then
-          write (2480,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
-          if (pco%csvout == "y") then
-            write (2484,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
-          end if 
+          if (pco%textout == "y") then
+            write (2480,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
+            if (pco%csvout == "y") then
+              write (2484,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
+            end if 
+          end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_channel("d", time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch))
+          end if
+#endif
         end if 
       end if
 
@@ -37,10 +47,17 @@
       if (time%end_mo == 1) then
         ch_y(jrch) = ch_y(jrch) + ch_m(jrch)
         if (pco%chan%m == "y") then
-          write (2481,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
-          if (pco%csvout == "y") then
-            write (2485,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
+          if (pco%textout == "y") then
+            write (2481,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
+            if (pco%csvout == "y") then
+              write (2485,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
+            end if
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_channel("m", time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch))
+          end if
+#endif
         end if
         ch_m(jrch) = chz
       end if
@@ -49,10 +66,17 @@
       if (time%end_yr == 1) then
         ch_a(jrch) = ch_a(jrch) + ch_y(jrch)
         if (pco%chan%y == "y") then 
-          write (2482,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
-          if (pco%csvout == "y") then
-            write (2486,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
+          if (pco%textout == "y") then
+            write (2482,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
+            if (pco%csvout == "y") then
+              write (2486,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
+            end if
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_channel("y", time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch))
+          end if
+#endif
         end if
         
         ch_y(jrch) = chz
@@ -61,10 +85,17 @@
 !!!!! average annual print
       if (time%end_sim == 1 .and. pco%chan%a == "y") then
         ch_a(jrch) = ch_a(jrch) / time%yrs_prt
-        write (2483,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
-        if (pco%csvout == "y") then
-          write (2487,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
+        if (pco%textout == "y") then
+          write (2483,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
+          if (pco%csvout == "y") then
+            write (2487,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
+          end if
         end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_channel("a", time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch))
+        end if
+#endif
       end if
 
 100   format (4i6,2i8,2x,a,60e15.4)

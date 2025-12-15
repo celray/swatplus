@@ -11,6 +11,9 @@
       use carbon_module
       use hru_module, only : hru
       use landuse_data_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -59,41 +62,73 @@
       !! daily print
          if (pco%day_print == "y" .and. pco%int_day_cur == pco%int_day) then
           if (pco%wb_hru%d == "y") then
-             write (2000,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_d(j),      &
-                                                                           lum(ilu)%plant_cov, lum(ilu)%mgt_ops     !! water bal day
-             if (pco%csvout == "y") then
-               !! changed write unit below (2004 to write file data)
-               write (2004,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                    hwb_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+             if (pco%textout == "y") then
+               write (2000,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_d(j),      &
+                                                                             lum(ilu)%plant_cov, lum(ilu)%mgt_ops     !! water bal day
+               if (pco%csvout == "y") then
+                 !! changed write unit below (2004 to write file data)
+                 write (2004,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                                                      hwb_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+               end if
              end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_wb("d", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hwb_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
           end if
           hwb_d(j)%sw_init = hwb_d(j)%sw_final
           hwb_d(j)%sno_init = hwb_d(j)%sno_final
           
           if (pco%nb_hru%d == "y") then
-            write (2020,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_d(j),         &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops      !! nutrient bal day
-            if (pco%csvout == "y") then
-                write (2024,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                    hnb_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
-                end if
+            if (pco%textout == "y") then
+              write (2020,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_d(j),         &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops      !! nutrient bal day
+              if (pco%csvout == "y") then
+                  write (2024,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                                                      hnb_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+                  end if
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hru_nb("d", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                        hnb_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+            end if
+#endif
           end if
           if (pco%ls_hru%d == "y") then
-            write (2030,108) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_d(j),         &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_d(j)%percn       !! losses day
-            if (pco%csvout == "y") then
-                write (2034,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                    hls_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_d(j)%percn   
+            if (pco%textout == "y") then
+              write (2030,108) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_d(j),         &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_d(j)%percn       !! losses day
+              if (pco%csvout == "y") then
+                  write (2034,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                                                      hls_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_d(j)%percn   
+              end if
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hru_ls("d", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                        hls_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+            end if
+#endif
           end if
           if (pco%pw_hru%d == "y") then
             hpw_d(j)%bm_max = hpw_d(j)%bioms
-            write (2040,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_d(j),                  & 
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather day 
+            if (pco%textout == "y") then
+              write (2040,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_d(j),                  & 
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather day 
               if (pco%csvout == "y") then 
                 write (2044,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,           &
-                                                                hpw_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+                                                                  hpw_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
               end if 
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hru_pw("d", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                        hpw_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+            end if
+#endif
           end if
         end if
          
@@ -118,41 +153,73 @@
            hwb_m(j)%sno_final = hwb_d(j)%sno_final
            
            if (pco%wb_hru%m == "y") then
-             write (2001,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_m(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops           !! water bal mon
+             if (pco%textout == "y") then
+               write (2001,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_m(j),        &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops           !! water bal mon
                if (pco%csvout == "y") then
                  write (2005,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                          hwb_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
+                                                                            hwb_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
                end if
+             end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_wb("m", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hwb_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            
            if (pco%nb_hru%m == "y") then
-             write (2021,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_m(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops           !! nutrient bal mon
-             if (pco%csvout == "y") then
-                 write (2025,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                          hnb_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
-                 end if
+             if (pco%textout == "y") then
+               write (2021,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_m(j),        &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops           !! nutrient bal mon
+               if (pco%csvout == "y") then
+                   write (2025,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                                                            hnb_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
+                   end if
+             end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_nb("m", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hnb_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            
            if (pco%ls_hru%m == "y") then
-             write (2031,108) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_m(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_m(j)%percn            !! losses mon
-             if (pco%csvout == "y") then 
-                 write (2035,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                          hls_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_m(j)%percn  
+             if (pco%textout == "y") then
+               write (2031,108) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_m(j),        &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_m(j)%percn            !! losses mon
+               if (pco%csvout == "y") then 
+                   write (2035,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                                                            hls_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_m(j)%percn  
+               end if
              end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_ls("m", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hls_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            
            if (pco%pw_hru%m == "y") then
              hpw_m(j)%nplnt = pl_mass(j)%tot_com%n
              hpw_m(j)%pplnt = pl_mass(j)%tot_com%p
-             write (2041,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_m(j),         &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather mon
+             if (pco%textout == "y") then
+               write (2041,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_m(j),         &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather mon
                if (pco%csvout == "y") then 
                  write (2045,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,  &
-                                                                hpw_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+                                                                  hpw_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
                end if 
+             end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_pw("m", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hpw_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            hpw_m(j)%bm_max = 0.0
           
@@ -189,41 +256,73 @@
              hru(j)%irr = 1
            end if
           if (pco%wb_hru%y == "y") then
-             write (2002,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_y(j),          &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops           !! water balance yr
+             if (pco%textout == "y") then
+               write (2002,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_y(j),          &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops           !! water balance yr
                if (pco%csvout == "y") then
                  write (2006,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,   &
-                                                                          hwb_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
+                                                                            hwb_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
                end if
+             end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_wb("y", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hwb_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
           end if
           
            if (pco%nb_hru%y == "y") then
-             write (2022,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_y(j),          &
-                                                                                lum(ilu)%plant_cov, lum(ilu)%mgt_ops     !! nutrient balance yr
-             if (pco%csvout == "y") then
-                 write (2026,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,   &
-                                                                          hnb_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
-                 end if
+             if (pco%textout == "y") then
+               write (2022,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_y(j),          &
+                                                                                  lum(ilu)%plant_cov, lum(ilu)%mgt_ops     !! nutrient balance yr
+               if (pco%csvout == "y") then
+                   write (2026,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,   &
+                                                                            hnb_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops 
+                   end if
+             end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_nb("y", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hnb_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            
            if (pco%ls_hru%y == "y") then
-             write (2032,108) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_y(j),          &
-                                                                           lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_y(j)%percn            !! losses yr
-             if (pco%csvout == "y") then
-                 write (2036,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,   &
-                                                                          hls_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_y(j)%percn  
+             if (pco%textout == "y") then
+               write (2032,108) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_y(j),          &
+                                                                             lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_y(j)%percn            !! losses yr
+               if (pco%csvout == "y") then
+                   write (2036,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,   &
+                                                                            hls_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, hpw_y(j)%percn  
+               end if
              end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_ls("y", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hls_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            
            if (pco%pw_hru%y == "y") then
              hpw_y(j)%nplnt = pl_mass(j)%tot_com%n
              hpw_y(j)%pplnt = pl_mass(j)%tot_com%p
-             write (2042,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_y(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather yr             
+             if (pco%textout == "y") then
+               write (2042,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_y(j),        &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather yr             
                if (pco%csvout == "y") then 
                  write (2046,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                hpw_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+                                                                  hpw_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
                end if 
+             end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_pw("y", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hpw_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
           hpw_y(j)%bm_max = 0.0
            
@@ -241,12 +340,20 @@
            hwb_a(j)%sno_init = sno_init
            hwb_a(j)%sno_final = hwb_d(j)%sno_final
            if (pco%wb_hru%a == "y") then
-             write (2003,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_a(j),       &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops       !! water balance ann
-             if (pco%csvout == "y") then
-               write (2007,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,  &
-                                                                        hwb_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
+             if (pco%textout == "y") then
+               write (2003,100) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hwb_a(j),       &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops       !! water balance ann
+               if (pco%csvout == "y") then
+                 write (2007,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,  &
+                                                                          hwb_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
+               end if
              end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hru_wb("a", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                         hwb_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+             end if
+#endif
            end if
            sw_init = hwb_d(j)%sw_final
            sno_init = hwb_d(j)%sno_final
@@ -263,25 +370,41 @@
         
          if (time%end_sim == 1 .and. pco%nb_hru%a == "y") then 
            hnb_a(j) = hnb_a(j) / time%yrs_prt
-           write (2023,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_a(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops      !! nutrient bal ann
-           if (pco%csvout == "y") then 
-               write (2027,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                        hnb_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
-               end if
-             hnb_a(j) = hnbz
+           if (pco%textout == "y") then
+             write (2023,104) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hnb_a(j),        &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops      !! nutrient bal ann
+             if (pco%csvout == "y") then 
+                 write (2027,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                                                          hnb_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
+                 end if
+           end if
+#ifdef SQLITE_ENABLED
+           if (pco%sqliteout == "y") then
+             call sqlite_insert_hru_nb("a", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                       hnb_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+           end if
+#endif
+           hnb_a(j) = hnbz
          end if
         
          if (time%end_sim == 1 .and. pco%ls_hru%a == "y") then
            hls_a(j) = hls_a(j) / time%yrs_prt 
            percn_aa = hpw_a(j)%percn / time%yrs_prt
-           write (2033,107) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_a(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops, percn_aa       !! losses ann
+           if (pco%textout == "y") then
+             write (2033,107) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hls_a(j),        &
+                                                                            lum(ilu)%plant_cov, lum(ilu)%mgt_ops, percn_aa       !! losses ann
              if (pco%csvout == "y") then 
                write (2037,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                        hls_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, percn_aa 
+                                                                          hls_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops, percn_aa 
              end if
-             hls_a(j) = hlsz
+           end if
+#ifdef SQLITE_ENABLED
+           if (pco%sqliteout == "y") then
+             call sqlite_insert_hru_ls("a", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                       hls_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+           end if
+#endif
+           hls_a(j) = hlsz
          end if
         
          if (time%end_sim == 1 .and. pco%pw_hru%a == "y") then     
@@ -290,14 +413,22 @@
            hpw_a(j)%nplnt = pl_mass(j)%tot_com%n
            hpw_a(j)%pplnt = pl_mass(j)%tot_com%p
            hpw_a(j)%bm_max = bm_max_a   ! Restore bm_max_a
-           write (2043,102) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_a(j),           &
-                                                                        lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather ann
+           if (pco%textout == "y") then
+             write (2043,102) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_a(j),           &
+                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather ann
              if (pco%csvout == "y") then 
                write (2047,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,    &
-                                                              hpw_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
+                                                                hpw_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
              end if
-             hru(j)%strsa = hpw_a(j)%strsa
-             hpw_a(j) = hpwz
+           end if
+#ifdef SQLITE_ENABLED
+           if (pco%sqliteout == "y") then
+             call sqlite_insert_hru_pw("a", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                       hpw_a(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops)
+           end if
+#endif
+           hru(j)%strsa = hpw_a(j)%strsa
+           hpw_a(j) = hpwz
          end if
          
           if (time%end_sim == 1) then
