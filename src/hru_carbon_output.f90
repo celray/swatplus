@@ -9,6 +9,9 @@
       use organic_mineral_mass_module
       use soil_module
       use carbon_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       

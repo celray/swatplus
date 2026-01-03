@@ -103,37 +103,57 @@ set(CMAKE_Fortran_FLAGS_DEBUG   "${CMAKE_Fortran_FLAGS_DEBUG} ${fdebug}")
 set(CMAKE_Fortran_FLAGS_RELEASE "${frelease}")
 
 #############################################################################
-# SQLite3 Support (optional)
+# SQLite3 Support (optional, default OFF)
 option(ENABLE_SQLITE "Enable SQLite output support" OFF)
+option(USE_BUNDLED_SQLITE "Use bundled SQLite3 source instead of system library" ON)
 
 if(ENABLE_SQLITE)
-    # Find SQLite3 library
-    find_library(SQLITE3_LIBRARY NAMES sqlite3 libsqlite3
-        PATHS
-        /usr/lib
-        /usr/local/lib
-        /opt/local/lib
-        "C:/sqlite"
-        "C:/Program Files/sqlite"
-        "$ENV{SQLITE3_DIR}/lib"
-    )
+    add_definitions(-DSQLITE_ENABLED)
     
-    find_path(SQLITE3_INCLUDE_DIR sqlite3.h
-        PATHS
-        /usr/include
-        /usr/local/include
-        /opt/local/include
-        "C:/sqlite"
-        "C:/Program Files/sqlite"
-        "$ENV{SQLITE3_DIR}/include"
-    )
+    if(USE_BUNDLED_SQLITE)
+        # Use bundled SQLite3 source from sqlite/ directory
+        set(SQLITE3_SOURCE "${PROJECT_SOURCE_DIR}/sqlite/sqlite3.c")
+        set(SQLITE3_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/sqlite")
+        
+        if(EXISTS "${SQLITE3_SOURCE}")
+            message(STATUS "Using bundled SQLite3 source: ${SQLITE3_SOURCE}")
+            # Enable C language for compiling sqlite3.c
+            enable_language(C)
+            set(USE_BUNDLED_SQLITE_FOUND TRUE)
+        else()
+            message(WARNING "Bundled SQLite3 source not found at ${SQLITE3_SOURCE}. Trying system library.")
+            set(USE_BUNDLED_SQLITE OFF)
+        endif()
+    endif()
     
-    if(SQLITE3_LIBRARY)
-        message(STATUS "SQLite3 found: ${SQLITE3_LIBRARY}")
-        add_definitions(-DSQLITE_ENABLED)
-    else()
-        message(WARNING "SQLite3 library not found. SQLite output will be disabled.")
-        set(ENABLE_SQLITE OFF)
+    if(NOT USE_BUNDLED_SQLITE OR NOT USE_BUNDLED_SQLITE_FOUND)
+        # Try to find system SQLite3 library
+        find_library(SQLITE3_LIBRARY NAMES sqlite3 libsqlite3
+            PATHS
+            /usr/lib
+            /usr/local/lib
+            /opt/local/lib
+            "C:/sqlite"
+            "C:/Program Files/sqlite"
+            "$ENV{SQLITE3_DIR}/lib"
+        )
+        
+        find_path(SQLITE3_INCLUDE_DIR sqlite3.h
+            PATHS
+            /usr/include
+            /usr/local/include
+            /opt/local/include
+            "C:/sqlite"
+            "C:/Program Files/sqlite"
+            "$ENV{SQLITE3_DIR}/include"
+        )
+        
+        if(SQLITE3_LIBRARY)
+            message(STATUS "SQLite3 system library found: ${SQLITE3_LIBRARY}")
+        else()
+            message(WARNING "SQLite3 library not found. SQLite output will be disabled.")
+            set(ENABLE_SQLITE OFF)
+        endif()
     endif()
 endif()
 
@@ -164,12 +184,17 @@ endif()
 
 
 file(GLOB sources src/*.f90)
-add_executable(${SWATPLUS_EXE} ${sources})
 
-# Link SQLite3 if enabled
-if(ENABLE_SQLITE AND SQLITE3_LIBRARY)
+# Add bundled SQLite3 source if enabled
+if(ENABLE_SQLITE AND USE_BUNDLED_SQLITE AND USE_BUNDLED_SQLITE_FOUND)
+    add_executable(${SWATPLUS_EXE} ${sources} ${SQLITE3_SOURCE})
+    target_include_directories(${SWATPLUS_EXE} PRIVATE ${SQLITE3_INCLUDE_DIR})
+elseif(ENABLE_SQLITE AND SQLITE3_LIBRARY)
+    add_executable(${SWATPLUS_EXE} ${sources})
     target_link_libraries(${SWATPLUS_EXE} ${SQLITE3_LIBRARY})
     target_include_directories(${SWATPLUS_EXE} PRIVATE ${SQLITE3_INCLUDE_DIR})
+else()
+    add_executable(${SWATPLUS_EXE} ${sources})
 endif()
 
 #############################################################################
@@ -209,8 +234,12 @@ message( "-- BINARY_DIR         ${PROJECT_BINARY_DIR}")
 message( "-- Install Prefix     ${CMAKE_INSTALL_PREFIX}")
 message( "-- Executable         ${SWATPLUS_EXE}, rev/tag: ${SWAT_VERSION}")
 message( "-- SQLite Support     ${ENABLE_SQLITE}")
-if(ENABLE_SQLITE AND SQLITE3_LIBRARY)
-    message( "-- SQLite3 Library    ${SQLITE3_LIBRARY}")
+if(ENABLE_SQLITE)
+    if(USE_BUNDLED_SQLITE AND USE_BUNDLED_SQLITE_FOUND)
+        message( "-- SQLite3 Source     ${SQLITE3_SOURCE} (bundled)")
+    elseif(SQLITE3_LIBRARY)
+        message( "-- SQLite3 Library    ${SQLITE3_LIBRARY} (system)")
+    endif()
 endif()
 message( "-- FORD project       ${PROJECT_SOURCE_DIR}/ford.md")
 message( "-- Test Data Dir      ${ref_dir}")

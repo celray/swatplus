@@ -4,6 +4,9 @@
       use basin_module
       use sd_channel_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
 
@@ -25,7 +28,12 @@
           write (2120,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bchsd_d
           if (pco%csvout == "y") then
             write (2124,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bchsd_d
-          end if 
+          end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_chanmorph("d", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bchsd_d)
+          end if
+#endif
         end if 
       end if
 
@@ -40,6 +48,11 @@
           if (pco%csvout == "y") then
             write (2125,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bchsd_m
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_chanmorph("m", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bchsd_m)
+          end if
+#endif
         end if
         bchsd_m = chsdz
       end if
@@ -55,6 +68,11 @@
           if (pco%csvout == "y") then
             write (2126,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bchsd_y
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_chanmorph("y", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bchsd_y)
+          end if
+#endif
         end if
         
         bchsd_y = chsdz
@@ -69,6 +87,11 @@
         if (pco%csvout == "y") then
           write (2127,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bchsd_a
         end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_basin_sd_chanmorph("a", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bchsd_a)
+        end if
+#endif
       end if
 
 100   format (4i6,2x,2a,2x,a17,60(1x,e14.4))

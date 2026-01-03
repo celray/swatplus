@@ -5,6 +5,9 @@
       ! use channel_module
       use hydrograph_module
       use water_body_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
              
@@ -36,7 +39,13 @@
           if (pco%csvout == "y") then
             write (4904,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, &
             bch_wat_d, bch_stor_d, bch_in_d, bch_out_d
-          end if 
+          end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_cha("d", time%day, time%mo, time%day_mo, time%yrc, 1_8, 1, bsn%name, &
+                                            bch_wat_d, bch_stor_d, bch_in_d, bch_out_d)
+          end if
+#endif
         end if 
       end if
 
@@ -55,6 +64,12 @@
             write (4905,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, &
               bch_wat_m, bch_stor_d, bch_in_m, bch_out_m
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_cha("m", time%day, time%mo, time%day_mo, time%yrc, 1_8, 1, bsn%name, &
+                                            bch_wat_m, bch_stor_d, bch_in_m, bch_out_m)
+          end if
+#endif
         end if
         bch_in_m = chaz
         bch_out_m = chaz
@@ -76,6 +91,12 @@
             write (4906,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name,&
               bch_wat_y, bch_stor_d, bch_in_y, bch_out_y
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_cha("y", time%day, time%mo, time%day_mo, time%yrc, 1_8, 1, bsn%name, &
+                                            bch_wat_y, bch_stor_d, bch_in_y, bch_out_y)
+          end if
+#endif
         end if
         bch_in_y = chaz
         bch_out_y = chaz
@@ -94,6 +115,12 @@
           write (4907,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, &
             bch_wat_a, bch_stor_d, bch_in_a, bch_out_a
         end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_basin_sd_cha("a", time%day, time%mo, time%day_mo, time%yrc, 1_8, 1, bsn%name, &
+                                          bch_wat_a, bch_stor_d, bch_in_a, bch_out_a)
+        end if
+#endif
       end if
 
  !100   format (4i6,2x,2a,2x,a17,f14.4,59(1x,e14.4))

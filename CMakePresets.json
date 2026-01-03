@@ -79,6 +79,37 @@
                 "CMAKE_INSTALL_PREFIX": "build/debug",
                 "CMAKE_Fortran_COMPILER": "gfortran"
             }
+        },
+        {
+            "name": "ifx_debug_sqlite",
+            "displayName": "ifx debug with SQLite",
+            "description": "Builds ifx debug executable with SQLite output support",
+            "binaryDir": "build/debug-sqlite",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "build/debug-sqlite",
+                "CMAKE_Fortran_COMPILER": "ifx",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON"
+            }
+        },
+        {
+            "name": "gfortran_debug_sqlite_linux",
+            "displayName": "gfortran debug with SQLite (Linux)",
+            "description": "Builds gfortran debug executable with SQLite output support for Linux",
+            "binaryDir": "build/debug-sqlite",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "build/debug-sqlite",
+                "CMAKE_Fortran_COMPILER": "gfortran",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON"
+            }
         }
     ]
 }

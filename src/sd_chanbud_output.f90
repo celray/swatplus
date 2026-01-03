@@ -4,6 +4,9 @@
       use basin_module
       use time_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       integer, intent (in) :: ichan         !             |
@@ -21,6 +24,12 @@
              write (4812,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
              ch_sed_bud(ichan)
            end if
+#ifdef SQLITE_ENABLED
+           if (pco%sqliteout == "y") then
+             call sqlite_insert_sd_chanbud("d", time%day, time%mo, time%day_mo, time%yrc, &
+               ichan, ob(iob)%gis_id, ob(iob)%name, ch_sed_bud(ichan))
+           end if
+#endif
         end if
       end if
 
@@ -36,6 +45,12 @@
             write (4813,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
               ch_sed_bud_m(ichan)
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_sd_chanbud("m", time%day, time%mo, time%day_mo, time%yrc, &
+              ichan, ob(iob)%gis_id, ob(iob)%name, ch_sed_bud_m(ichan))
+          end if
+#endif
         end if
         ch_sed_bud_m(ichan) = ch_sed_budz
         end if
@@ -52,6 +67,12 @@
            write (4814,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
              ch_sed_bud_y(ichan)
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_sd_chanbud("y", time%day, time%mo, time%day_mo, time%yrc, &
+              ichan, ob(iob)%gis_id, ob(iob)%name, ch_sed_bud_y(ichan))
+          end if
+#endif
         end if
         ch_sed_bud_y(ichan) = ch_sed_budz
       end if
@@ -67,6 +88,12 @@
           write (4815,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
             ch_sed_bud_a(ichan)
         end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_sd_chanbud("a", time%day, time%mo, time%day_mo, time%yrc, &
+            ichan, ob(iob)%gis_id, ob(iob)%name, ch_sed_bud_a(ichan))
+        end if
+#endif
        end if
      end if 
       

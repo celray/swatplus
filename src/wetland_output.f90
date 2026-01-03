@@ -5,6 +5,9 @@
       use reservoir_module
       use hydrograph_module
       use water_body_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -27,6 +30,12 @@
                write (2552,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                wet_wat_d(j), wet(j), wet_in_d(j), wet_out_d(j)
              end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_wetland("d", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                          wet_wat_d(j), wet(j), wet_in_d(j), wet_out_d(j))
+             end if
+#endif
           end if 
         end if 
                                                     
@@ -52,7 +61,13 @@
               if (pco%csvout == "y") then
                 write (2553,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                 wet_wat_m(j), wet(j), wet_in_m(j), wet_out_m(j)
-              end if 
+              end if
+#ifdef SQLITE_ENABLED
+              if (pco%sqliteout == "y") then
+                call sqlite_insert_wetland("m", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                           wet_wat_m(j), wet(j), wet_in_m(j), wet_out_m(j))
+              end if
+#endif
           end if
           wet_in_m(j) = resmz
           wet_out_m(j) = resmz
@@ -73,6 +88,12 @@
                 write (2554,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                 wet_wat_y(j), wet(j), wet_in_y(j), wet_out_y(j)
               end if
+#ifdef SQLITE_ENABLED
+              if (pco%sqliteout == "y") then
+                call sqlite_insert_wetland("y", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                           wet_wat_y(j), wet(j), wet_in_y(j), wet_out_y(j))
+              end if
+#endif
           end if
           wet_in_y(j) = resmz
           wet_out_y(j) = resmz
@@ -89,7 +110,13 @@
           if (pco%csvout == "y") then
             write (2555,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, wet_wat_a(j), &
             wet(j), wet_in_a(j), wet_out_a(j)
-          end if 
+          end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_wetland("a", time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
+                                       wet_wat_a(j), wet(j), wet_in_a(j), wet_out_a(j))
+          end if
+#endif
         end if
         
       return

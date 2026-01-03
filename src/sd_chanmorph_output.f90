@@ -4,6 +4,9 @@
       use basin_module
       use time_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       integer, intent (in) :: ichan         !             |
@@ -22,6 +25,12 @@
              write (4804,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
              chsd_d(ichan)
            end if
+#ifdef SQLITE_ENABLED
+           if (pco%sqliteout == "y") then
+             call sqlite_insert_sd_chanmorph("d", time%day, time%mo, time%day_mo, time%yrc, &
+               ichan, ob(iob)%gis_id, ob(iob)%name, chsd_d(ichan))
+           end if
+#endif
         end if
       end if
 
@@ -37,6 +46,12 @@
             write (4805,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
               chsd_m(ichan)
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_sd_chanmorph("m", time%day, time%mo, time%day_mo, time%yrc, &
+              ichan, ob(iob)%gis_id, ob(iob)%name, chsd_m(ichan))
+          end if
+#endif
         end if
         chsd_m(ichan) = chsdz
         end if
@@ -53,6 +68,12 @@
            write (4806,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
              chsd_y(ichan)
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_sd_chanmorph("y", time%day, time%mo, time%day_mo, time%yrc, &
+              ichan, ob(iob)%gis_id, ob(iob)%name, chsd_y(ichan))
+          end if
+#endif
         end if
       end if
 
@@ -67,6 +88,12 @@
           write (4807,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ichan, ob(iob)%gis_id, ob(iob)%name, &
             chsd_a(ichan)
         end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_sd_chanmorph("a", time%day, time%mo, time%day_mo, time%yrc, &
+            ichan, ob(iob)%gis_id, ob(iob)%name, chsd_a(ichan))
+        end if
+#endif
        end if
      end if 
       

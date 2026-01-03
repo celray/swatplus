@@ -5,6 +5,9 @@
       use reservoir_module
       use hydrograph_module
       use water_body_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -23,6 +26,11 @@
                  write (2544,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                     res_wat_d(j), res(j), res_in_d(j), res_out_d(j)
              end if
+#ifdef SQLITE_ENABLED
+             ! TODO: Add SQLite insert for daily reservoir output
+             ! Data structures: res_wat_d(j) (wbod type), res(j) (reservoir type),
+             !                  res_in_d(j) (res_mass type), res_out_d(j) (res_mass type)
+#endif
           end if 
          end if 
   
@@ -45,7 +53,12 @@
               if (pco%csvout == "y") then
                 write (2545,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                     res_wat_m(j), res(j), res_in_m(j), res_out_m(j)
-              end if 
+              end if
+#ifdef SQLITE_ENABLED
+              ! TODO: Add SQLite insert for monthly reservoir output
+              ! Data structures: res_wat_m(j) (wbod type), res(j) (reservoir type),
+              !                  res_in_m(j) (res_mass type), res_out_m(j) (res_mass type)
+#endif
           end if
           res_in_m(j) = resmz
           res_out_m(j) = resmz
@@ -66,6 +79,11 @@
                 write (2546,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                     res_wat_y(j), res(j), res_in_y(j), res_out_y(j)
               end if
+#ifdef SQLITE_ENABLED
+              ! TODO: Add SQLite insert for yearly reservoir output
+              ! Data structures: res_wat_y(j) (wbod type), res(j) (reservoir type),
+              !                  res_in_y(j) (res_mass type), res_out_y(j) (res_mass type)
+#endif
           end if
           res_in_y(j) = resmz
           res_out_y(j) = resmz
@@ -82,7 +100,12 @@
           if (pco%csvout == "y") then
             write (2547,'(*(G0.3,:","))')time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
                 res_wat_a(j), res(j), res_in_a(j), res_out_a(j)
-          end if 
+          end if
+#ifdef SQLITE_ENABLED
+          ! TODO: Add SQLite insert for average annual reservoir output
+          ! Data structures: res_wat_a(j) (wbod type), res(j) (reservoir type),
+          !                  res_in_a(j) (res_mass type), res_out_a(j) (res_mass type)
+#endif
           res_in_a(j) = resmz
           res_out_a(j) = resmz
           res_wat_a(j) = wbodz

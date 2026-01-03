@@ -4,6 +4,9 @@
       use basin_module
       use sd_channel_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
                   
@@ -23,7 +26,12 @@
           write (2128,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bch_sed_bud_d
           if (pco%csvout == "y") then
             write (2132,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bch_sed_bud_d
-          end if 
+          end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_chanbud("d", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bch_sed_bud_d)
+          end if
+#endif
         end if 
       end if
 
@@ -38,6 +46,11 @@
           if (pco%csvout == "y") then
             write (2133,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bch_sed_bud_m
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_chanbud("m", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bch_sed_bud_m)
+          end if
+#endif
         end if
         bch_sed_bud_m = ch_sed_budz
       end if
@@ -53,6 +66,11 @@
           if (pco%csvout == "y") then
             write (2134,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bch_sed_bud_y
           end if
+#ifdef SQLITE_ENABLED
+          if (pco%sqliteout == "y") then
+            call sqlite_insert_basin_sd_chanbud("y", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bch_sed_bud_y)
+          end if
+#endif
         end if
         bch_sed_bud_y = ch_sed_budz
       end if
@@ -66,6 +84,11 @@
         if (pco%csvout == "y") then
           write (2135,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, bch_sed_bud_a
         end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_basin_sd_chanbud("a", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bch_sed_bud_a)
+        end if
+#endif
       end if
 
 100   format (4i6,2x,2a,2x,a17,60(1x,e14.4))

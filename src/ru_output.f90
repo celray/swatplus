@@ -3,6 +3,9 @@
       use time_module
       use basin_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -25,6 +28,11 @@
             if (pco%csvout == "y") then
               write (2604,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, ru_d(iru)
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_ru("d", time%day, time%mo, time%day_mo, time%yrc, iru, ob(iob)%gis_id, ob(iob)%name, ru_d(iru))
+            end if
+#endif
           end if
         end if
 
@@ -36,6 +44,11 @@
             if (pco%csvout == "y") then
               write (2605,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, ru_m(iru)
             endif
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_ru("m", time%day, time%mo, time%day_mo, time%yrc, iru, ob(iob)%gis_id, ob(iob)%name, ru_m(iru))
+            end if
+#endif
           end if
           ru_m(iru) = hz
         end if
@@ -48,6 +61,11 @@
             if (pco%csvout == "y") then
               write (2606,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, ru_y(iru) 
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_ru("y", time%day, time%mo, time%day_mo, time%yrc, iru, ob(iob)%gis_id, ob(iob)%name, ru_y(iru))
+            end if
+#endif
           end if
           !! zero yearly variables        
           ru_y(iru) = hz
@@ -59,7 +77,12 @@
             write (2603,*) time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, ru_a(iru)
             if (pco%csvout == "y") then 
               write (2607,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, ru_a(iru)  
-            end if 
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_ru("a", time%day, time%mo, time%day_mo, time%yrc, iru, ob(iob)%gis_id, ob(iob)%name, ru_a(iru))
+            end if
+#endif
           end if
 
       return

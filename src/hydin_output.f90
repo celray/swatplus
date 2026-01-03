@@ -3,6 +3,9 @@
       use hydrograph_module
       use time_module
       use basin_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
 
 !!    ~ ~ ~ PURPOSE ~ ~ ~
 !!    this subroutine outputs hyd variables on daily, monthly and annual time steps
@@ -25,7 +28,12 @@
                 write (2564,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(icmd)%name, ob(icmd)%typ, &
                  ob(icmd)%obtyp_in(iin), ob(icmd)%obtypno_in(iin), ob(icmd)%htyp_in(iin), ob(icmd)%frac_in(iin),     &
                  ob(icmd)%hin_d(iin)
-              end if       
+              end if
+#ifdef SQLITE_ENABLED
+              if (pco%sqliteout == "y") then
+                call sqlite_insert_hyd("d", "in", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hin_d(iin))
+              end if
+#endif
           endif
         end if
                                                     
@@ -42,6 +50,11 @@
                     ob(icmd)%obtyp_in(iin), ob(icmd)%obtypno_in(iin), ob(icmd)%htyp_in(iin), ob(icmd)%frac_in(iin),  &
                     ob(icmd)%hin_m(iin)
               end if
+#ifdef SQLITE_ENABLED
+              if (pco%sqliteout == "y") then
+                call sqlite_insert_hyd("m", "in", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hin_m(iin))
+              end if
+#endif
           end if
           ob(icmd)%hin_y(iin) = ob(icmd)%hin_y(iin)+ ob(icmd)%hin_m(iin)
           ob(icmd)%hin_m(iin) = hz
@@ -56,6 +69,11 @@
               write (2566,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(icmd)%name,  ob(icmd)%typ, ob(icmd)%num, &
               ob(icmd)%obtyp_in(iin), ob(icmd)%obtypno_in(iin), ob(icmd)%htyp_in(iin), ob(icmd)%frac_in(iin), ob(icmd)%hin_y(iin)
             endif
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hyd("y", "in", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hin_y(iin))
+            end if
+#endif
           end if
           ob(icmd)%hin_a(iin) = ob(icmd)%hin_a(iin)+ ob(icmd)%hin_y(iin)
           ob(icmd)%hin_y(iin) = hz
@@ -70,6 +88,11 @@
               write (2567,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(icmd)%name, ob(icmd)%typ, &
                 ob(icmd)%obtyp_in(iin), ob(icmd)%obtypno_in(iin), ob(icmd)%htyp_in(iin), ob(icmd)%frac_in(iin), ob(icmd)%hin_a(iin)
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hyd("a", "in", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hin_a(iin))
+            end if
+#endif
         end if
 
         end do

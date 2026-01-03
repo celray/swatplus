@@ -3,6 +3,9 @@
       use time_module
       use basin_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -28,7 +31,12 @@
                ob(icmd)%obtyp_out(iout),                              &
                ob(icmd)%obtypno_out(iout), ob(icmd)%htyp_out(iout),                   &
                ob(icmd)%frac_out(iout), ht1  
-            end if 
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hyd("d", "out", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ht1)
+            end if
+#endif
           end if
         endif
         ob(icmd)%hout_m(iout) = ob(icmd)%hout_m(iout) + ht1
@@ -46,6 +54,11 @@
              ob(icmd)%obtypno_out(iout), ob(icmd)%htyp_out(iout),                   &
              ob(icmd)%frac_out(iout), ob(icmd)%hout_m(iout)
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hyd("m", "out", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hout_m(iout))
+            end if
+#endif
           end if
           ob(icmd)%hout_y(iout) = ob(icmd)%hout_y(iout) +                 &
                                              ob(icmd)%hout_m(iout)
@@ -65,6 +78,11 @@
                ob(icmd)%obtypno_out(iout), ob(icmd)%htyp_out(iout),                   &
                ob(icmd)%frac_out(iout), ob(icmd)%hout_y(iout)
              end if
+#ifdef SQLITE_ENABLED
+             if (pco%sqliteout == "y") then
+               call sqlite_insert_hyd("y", "out", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hout_y(iout))
+             end if
+#endif
           end if
           ob(icmd)%hout_a(iout) = ob(icmd)%hout_a(iout) + ob(icmd)%hout_y(iout)
           ob(icmd)%hout_y(iout) = hz
@@ -82,7 +100,12 @@
               ob(icmd)%typ, ob(icmd)%obtyp_out(iout),                   &
               ob(icmd)%obtypno_out(iout), ob(icmd)%htyp_out(iout),                      &
               ob(icmd)%frac_out(iout), ob(icmd)%hout_a(iout)
-            end if 
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_hyd("a", "out", time%day, time%mo, time%day_mo, time%yrc, icmd, ob(icmd)%gis_id, ob(icmd)%name, ob(icmd)%typ, ob(icmd)%hout_a(iout))
+            end if
+#endif
         end if
         
       return

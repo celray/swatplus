@@ -3,6 +3,9 @@
       use time_module
       use basin_module
       use hydrograph_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -24,6 +27,11 @@
             if (pco%csvout == "y") then
               write (4604,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_d(irec)
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_recall("d", time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_d(irec))
+            end if
+#endif
           end if
         end if
 
@@ -35,6 +43,11 @@
             if (pco%csvout == "y") then
               write (4605,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_m(irec)
             endif
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_recall("m", time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_m(irec))
+            end if
+#endif
           end if
           rec_m(irec) = hz
         end if
@@ -47,6 +60,11 @@
             if (pco%csvout == "y") then
               write (4606,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_y(irec) 
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_recall("y", time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_y(irec))
+            end if
+#endif
           end if
           !! zero yearly variables        
           rec_y(irec) = hz
@@ -58,7 +76,12 @@
             write (4603,*) time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_a(irec)
             if (pco%csvout == "y") then 
               write (4607,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, ob(iob)%name, ob(iob)%typ, rec_a(irec)  
-            end if 
+            end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_recall("a", time%day, time%mo, time%day_mo, time%yrc, ob(iob)%name, ob(iob)%typ, rec_a(irec))
+            end if
+#endif
           end if
 
       return

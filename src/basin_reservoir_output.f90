@@ -5,6 +5,9 @@
       use reservoir_module
       use hydrograph_module
       use water_body_module
+#ifdef SQLITE_ENABLED
+      use sqlite_output_module
+#endif
       
       implicit none
       
@@ -42,6 +45,11 @@
               write (2104,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
                 bres_wat_d, bres, bres_in_d, bres_out_d
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_basin_res("d", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bres_wat_d, bres, bres_in_d, bres_out_d)
+            end if
+#endif
           end if
         end if
 
@@ -59,6 +67,11 @@
               write (2105,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name,  &
                 bres_wat_m, bres, bres_in_m, bres_out_m
             endif
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_basin_res("m", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bres_wat_m, bres, bres_in_m, bres_out_m)
+            end if
+#endif
           end if
           bres_in_m = resmz
           bres_out_m = resmz
@@ -78,6 +91,11 @@
               write (2106,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
                 bres_wat_y, bres, bres_in_y, bres_out_y 
             end if
+#ifdef SQLITE_ENABLED
+            if (pco%sqliteout == "y") then
+              call sqlite_insert_basin_res("y", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bres_wat_y, bres, bres_in_y, bres_out_y)
+            end if
+#endif
           end if
           !! zero yearly variables        
           bres_in_y = resmz
@@ -95,7 +113,12 @@
         if (pco%csvout == "y") then 
           write (2107,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
             bres_wat_a, bres, bres_in_a, bres_out_a
-        end if 
+        end if
+#ifdef SQLITE_ENABLED
+        if (pco%sqliteout == "y") then
+          call sqlite_insert_basin_res("a", time%day, time%mo, time%day_mo, time%yrc, 1, 1_8, bsn%name, bres_wat_a, bres, bres_in_a, bres_out_a)
+        end if
+#endif
       end if
       
       return

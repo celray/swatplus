@@ -22,7 +22,14 @@
       public :: sqlite_insert_basin_aqu, sqlite_insert_aquifer
       public :: sqlite_insert_basin_wb, sqlite_insert_basin_nb, sqlite_insert_basin_ls, sqlite_insert_basin_pw
       public :: sqlite_insert_basin_ch, sqlite_insert_channel
+      public :: sqlite_insert_basin_sd_cha
       public :: sqlite_insert_hru_wb, sqlite_insert_hru_nb, sqlite_insert_hru_ls, sqlite_insert_hru_pw
+      public :: sqlite_insert_sd_channel, sqlite_insert_wetland
+      public :: sqlite_insert_lsu_wb, sqlite_insert_lsu_nb, sqlite_insert_lsu_ls, sqlite_insert_lsu_pw
+      public :: sqlite_insert_recall, sqlite_insert_ru, sqlite_insert_hyd, sqlite_insert_deposition
+      public :: sqlite_insert_sd_chanmorph, sqlite_insert_sd_chanbud
+      public :: sqlite_insert_basin_sd_chanmorph, sqlite_insert_basin_sd_chanbud
+      public :: sqlite_insert_basin_res
       
       ! Global database handle
       type(sqlite3_db), save :: sqlite_db
@@ -810,6 +817,105 @@
         
       end subroutine sqlite_insert_basin_ch
       
+      !> Insert basin SD channel data into SQLite
+      subroutine sqlite_insert_basin_sd_cha(period, jday, mon, day_mo, yrc, gis_id, unit_id, name, &
+                                            ch_wat, ch_stor, ch_in, ch_out)
+        use hydrograph_module, only : hyd_output
+        use water_body_module, only : water_body
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(water_body), intent(in) :: ch_wat
+        type(hyd_output), intent(in) :: ch_stor, ch_in, ch_out
+        character(len=32) :: table_name
+        character(len=16) :: col_names(58)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "basin_sd_cha_" // trim(period)
+        
+        ! water_body has: area_ha, precip, evap, seep (4 fields)
+        ! hyd_output has: flo, sed, orgn, sedp, no3, solp, chla, nh3, no2, cbod, dox, san, sil, cla, sag, lag, grv, temp (18 fields)
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "gis_id", "unit", "name", &
+                     "wat_area_ha", "wat_precip", "wat_evap", "wat_seep", &
+                     "stor_flo", "stor_sed", "stor_orgn", "stor_sedp", "stor_no3", "stor_solp", "stor_chla", &
+                     "stor_nh3", "stor_no2", "stor_cbod", "stor_dox", "stor_san", "stor_sil", "stor_cla", &
+                     "stor_sag", "stor_lag", "stor_grv", "stor_temp", &
+                     "in_flo", "in_sed", "in_orgn", "in_sedp", "in_no3", "in_solp", "in_chla", "in_nh3", &
+                     "in_no2", "in_cbod", "in_dox", "in_san", "in_sil", "in_cla", "in_sag", "in_lag", &
+                     "in_grv", "in_temp", &
+                     "out_flo", "out_sed", "out_orgn", "out_sedp", "out_no3", "out_solp", "out_chla", &
+                     "out_nh3", "out_no2", "out_cbod", "out_dox"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_text(name)
+        ! Water body (type water_body)
+        call sqlite_insert_row_add_real(ch_wat%area_ha)
+        call sqlite_insert_row_add_real(ch_wat%precip)
+        call sqlite_insert_row_add_real(ch_wat%evap)
+        call sqlite_insert_row_add_real(ch_wat%seep)
+        ! Storage (type hyd_output)
+        call sqlite_insert_row_add_real(ch_stor%flo)
+        call sqlite_insert_row_add_real(ch_stor%sed)
+        call sqlite_insert_row_add_real(ch_stor%orgn)
+        call sqlite_insert_row_add_real(ch_stor%sedp)
+        call sqlite_insert_row_add_real(ch_stor%no3)
+        call sqlite_insert_row_add_real(ch_stor%solp)
+        call sqlite_insert_row_add_real(ch_stor%chla)
+        call sqlite_insert_row_add_real(ch_stor%nh3)
+        call sqlite_insert_row_add_real(ch_stor%no2)
+        call sqlite_insert_row_add_real(ch_stor%cbod)
+        call sqlite_insert_row_add_real(ch_stor%dox)
+        call sqlite_insert_row_add_real(ch_stor%san)
+        call sqlite_insert_row_add_real(ch_stor%sil)
+        call sqlite_insert_row_add_real(ch_stor%cla)
+        call sqlite_insert_row_add_real(ch_stor%sag)
+        call sqlite_insert_row_add_real(ch_stor%lag)
+        call sqlite_insert_row_add_real(ch_stor%grv)
+        call sqlite_insert_row_add_real(ch_stor%temp)
+        ! Inflow (type hyd_output)
+        call sqlite_insert_row_add_real(ch_in%flo)
+        call sqlite_insert_row_add_real(ch_in%sed)
+        call sqlite_insert_row_add_real(ch_in%orgn)
+        call sqlite_insert_row_add_real(ch_in%sedp)
+        call sqlite_insert_row_add_real(ch_in%no3)
+        call sqlite_insert_row_add_real(ch_in%solp)
+        call sqlite_insert_row_add_real(ch_in%chla)
+        call sqlite_insert_row_add_real(ch_in%nh3)
+        call sqlite_insert_row_add_real(ch_in%no2)
+        call sqlite_insert_row_add_real(ch_in%cbod)
+        call sqlite_insert_row_add_real(ch_in%dox)
+        call sqlite_insert_row_add_real(ch_in%san)
+        call sqlite_insert_row_add_real(ch_in%sil)
+        call sqlite_insert_row_add_real(ch_in%cla)
+        call sqlite_insert_row_add_real(ch_in%sag)
+        call sqlite_insert_row_add_real(ch_in%lag)
+        call sqlite_insert_row_add_real(ch_in%grv)
+        call sqlite_insert_row_add_real(ch_in%temp)
+        ! Outflow (type hyd_output)
+        call sqlite_insert_row_add_real(ch_out%flo)
+        call sqlite_insert_row_add_real(ch_out%sed)
+        call sqlite_insert_row_add_real(ch_out%orgn)
+        call sqlite_insert_row_add_real(ch_out%sedp)
+        call sqlite_insert_row_add_real(ch_out%no3)
+        call sqlite_insert_row_add_real(ch_out%solp)
+        call sqlite_insert_row_add_real(ch_out%chla)
+        call sqlite_insert_row_add_real(ch_out%nh3)
+        call sqlite_insert_row_add_real(ch_out%no2)
+        call sqlite_insert_row_add_real(ch_out%cbod)
+        call sqlite_insert_row_add_real(ch_out%dox)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_basin_sd_cha
+      
       !> Insert channel data into SQLite (individual channel)
       subroutine sqlite_insert_channel(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, ch_data)
         use channel_module, only : ch_output
@@ -1143,17 +1249,965 @@
         
       end subroutine sqlite_insert_hru_pw
       
-      end module sqlite_output_module
+      !> Insert SD channel data into SQLite
+      subroutine sqlite_insert_sd_channel(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, &
+                                          area_ha, precip, evap, seep, ch_stor, ch_in, ch_out, wtemp_val)
+        use hydrograph_module, only : hyd_output
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        real, intent(in) :: area_ha, precip, evap, seep, wtemp_val
+        type(hyd_output), intent(in) :: ch_stor, ch_in, ch_out
+        character(len=32) :: table_name
+        character(len=16) :: col_names(52)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "channel_sd_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "area_ha", "precip", "evap", "seep", &
+                     "stor_flo", "stor_sed", "stor_orgn", "stor_sedp", "stor_no3", "stor_solp", "stor_chla", "stor_nh3", "stor_no2", &
+                     "stor_cbod", "stor_dox", "stor_san", "stor_sil", "stor_cla", "stor_sag", "stor_lag", "stor_grv", "stor_temp", &
+                     "in_flo", "in_sed", "in_orgn", "in_sedp", "in_no3", "in_solp", "in_chla", "in_nh3", "in_no2", &
+                     "in_cbod", "in_dox", &
+                     "out_flo", "out_sed", "out_orgn", "out_sedp", "out_no3", "out_solp", "out_chla", "out_nh3", "out_no2", &
+                     "out_cbod", "out_dox", "wtemp"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(area_ha)
+        call sqlite_insert_row_add_real(precip)
+        call sqlite_insert_row_add_real(evap)
+        call sqlite_insert_row_add_real(seep)
+        ! Storage
+        call sqlite_insert_row_add_real(ch_stor%flo)
+        call sqlite_insert_row_add_real(ch_stor%sed)
+        call sqlite_insert_row_add_real(ch_stor%orgn)
+        call sqlite_insert_row_add_real(ch_stor%sedp)
+        call sqlite_insert_row_add_real(ch_stor%no3)
+        call sqlite_insert_row_add_real(ch_stor%solp)
+        call sqlite_insert_row_add_real(ch_stor%chla)
+        call sqlite_insert_row_add_real(ch_stor%nh3)
+        call sqlite_insert_row_add_real(ch_stor%no2)
+        call sqlite_insert_row_add_real(ch_stor%cbod)
+        call sqlite_insert_row_add_real(ch_stor%dox)
+        call sqlite_insert_row_add_real(ch_stor%san)
+        call sqlite_insert_row_add_real(ch_stor%sil)
+        call sqlite_insert_row_add_real(ch_stor%cla)
+        call sqlite_insert_row_add_real(ch_stor%sag)
+        call sqlite_insert_row_add_real(ch_stor%lag)
+        call sqlite_insert_row_add_real(ch_stor%grv)
+        call sqlite_insert_row_add_real(ch_stor%temp)
+        ! Inflow
+        call sqlite_insert_row_add_real(ch_in%flo)
+        call sqlite_insert_row_add_real(ch_in%sed)
+        call sqlite_insert_row_add_real(ch_in%orgn)
+        call sqlite_insert_row_add_real(ch_in%sedp)
+        call sqlite_insert_row_add_real(ch_in%no3)
+        call sqlite_insert_row_add_real(ch_in%solp)
+        call sqlite_insert_row_add_real(ch_in%chla)
+        call sqlite_insert_row_add_real(ch_in%nh3)
+        call sqlite_insert_row_add_real(ch_in%no2)
+        call sqlite_insert_row_add_real(ch_in%cbod)
+        call sqlite_insert_row_add_real(ch_in%dox)
+        ! Outflow
+        call sqlite_insert_row_add_real(ch_out%flo)
+        call sqlite_insert_row_add_real(ch_out%sed)
+        call sqlite_insert_row_add_real(ch_out%orgn)
+        call sqlite_insert_row_add_real(ch_out%sedp)
+        call sqlite_insert_row_add_real(ch_out%no3)
+        call sqlite_insert_row_add_real(ch_out%solp)
+        call sqlite_insert_row_add_real(ch_out%chla)
+        call sqlite_insert_row_add_real(ch_out%nh3)
+        call sqlite_insert_row_add_real(ch_out%no2)
+        call sqlite_insert_row_add_real(ch_out%cbod)
+        call sqlite_insert_row_add_real(ch_out%dox)
+        call sqlite_insert_row_add_real(wtemp_val)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_sd_channel
       
-      !> Finalize SQLite output - called at end of simulation
-      !! This is a standalone subroutine to be called from main program
-      subroutine sqlite_finalize_output()
-        use sqlite_output_module, only : sqlite_finalize
+      !> Insert wetland data into SQLite
+      subroutine sqlite_insert_wetland(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, &
+                                       wet_wat, wet_ob, wet_in_data, wet_out_data)
+        use water_body_module, only : water_body
+        use hydrograph_module, only : hyd_output
         
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(water_body), intent(in) :: wet_wat
+        type(hyd_output), intent(in) :: wet_ob, wet_in_data, wet_out_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(58)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "wetland_" // trim(period)
+        
+        ! wet_wat (water_body): area_ha, precip, evap, seep (4 fields)
+        ! wet_ob, wet_in, wet_out (hyd_output): flo, sed, orgn, sedp, no3, solp, chla, nh3, no2, cbod, dox, san, sil, cla, sag, lag, grv, temp (18 fields each)
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "wat_area_ha", "wat_precip", "wat_evap", "wat_seep", &
+                     "wet_flo", "wet_sed", "wet_orgn", "wet_sedp", "wet_no3", "wet_solp", "wet_chla", &
+                     "wet_nh3", "wet_no2", "wet_cbod", "wet_dox", &
+                     "in_flo", "in_sed", "in_orgn", "in_sedp", "in_no3", "in_solp", "in_chla", &
+                     "in_nh3", "in_no2", "in_cbod", "in_dox", &
+                     "out_flo", "out_sed", "out_orgn", "out_sedp", "out_no3", "out_solp", "out_chla", &
+                     "out_nh3", "out_no2", "out_cbod", "out_dox", &
+                     "in_san", "in_sil", "in_cla", "in_sag", "in_lag", "in_grv", "in_temp", &
+                     "out_san", "out_sil", "out_cla", "out_sag", "out_lag", "out_grv", "out_temp"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        ! wet_wat (water_body: area_ha, precip, evap, seep)
+        call sqlite_insert_row_add_real(wet_wat%area_ha)
+        call sqlite_insert_row_add_real(wet_wat%precip)
+        call sqlite_insert_row_add_real(wet_wat%evap)
+        call sqlite_insert_row_add_real(wet_wat%seep)
+        ! wet_ob (hyd_output)
+        call sqlite_insert_row_add_real(wet_ob%flo)
+        call sqlite_insert_row_add_real(wet_ob%sed)
+        call sqlite_insert_row_add_real(wet_ob%orgn)
+        call sqlite_insert_row_add_real(wet_ob%sedp)
+        call sqlite_insert_row_add_real(wet_ob%no3)
+        call sqlite_insert_row_add_real(wet_ob%solp)
+        call sqlite_insert_row_add_real(wet_ob%chla)
+        call sqlite_insert_row_add_real(wet_ob%nh3)
+        call sqlite_insert_row_add_real(wet_ob%no2)
+        call sqlite_insert_row_add_real(wet_ob%cbod)
+        call sqlite_insert_row_add_real(wet_ob%dox)
+        ! wet_in (hyd_output)
+        call sqlite_insert_row_add_real(wet_in_data%flo)
+        call sqlite_insert_row_add_real(wet_in_data%sed)
+        call sqlite_insert_row_add_real(wet_in_data%orgn)
+        call sqlite_insert_row_add_real(wet_in_data%sedp)
+        call sqlite_insert_row_add_real(wet_in_data%no3)
+        call sqlite_insert_row_add_real(wet_in_data%solp)
+        call sqlite_insert_row_add_real(wet_in_data%chla)
+        call sqlite_insert_row_add_real(wet_in_data%nh3)
+        call sqlite_insert_row_add_real(wet_in_data%no2)
+        call sqlite_insert_row_add_real(wet_in_data%cbod)
+        call sqlite_insert_row_add_real(wet_in_data%dox)
+        ! wet_out (hyd_output)
+        call sqlite_insert_row_add_real(wet_out_data%flo)
+        call sqlite_insert_row_add_real(wet_out_data%sed)
+        call sqlite_insert_row_add_real(wet_out_data%orgn)
+        call sqlite_insert_row_add_real(wet_out_data%sedp)
+        call sqlite_insert_row_add_real(wet_out_data%no3)
+        call sqlite_insert_row_add_real(wet_out_data%solp)
+        call sqlite_insert_row_add_real(wet_out_data%chla)
+        call sqlite_insert_row_add_real(wet_out_data%nh3)
+        call sqlite_insert_row_add_real(wet_out_data%no2)
+        call sqlite_insert_row_add_real(wet_out_data%cbod)
+        call sqlite_insert_row_add_real(wet_out_data%dox)
+        ! Additional sediment fields
+        call sqlite_insert_row_add_real(wet_in_data%san)
+        call sqlite_insert_row_add_real(wet_in_data%sil)
+        call sqlite_insert_row_add_real(wet_in_data%cla)
+        call sqlite_insert_row_add_real(wet_in_data%sag)
+        call sqlite_insert_row_add_real(wet_in_data%lag)
+        call sqlite_insert_row_add_real(wet_in_data%grv)
+        call sqlite_insert_row_add_real(wet_in_data%temp)
+        call sqlite_insert_row_add_real(wet_out_data%san)
+        call sqlite_insert_row_add_real(wet_out_data%sil)
+        call sqlite_insert_row_add_real(wet_out_data%cla)
+        call sqlite_insert_row_add_real(wet_out_data%sag)
+        call sqlite_insert_row_add_real(wet_out_data%lag)
+        call sqlite_insert_row_add_real(wet_out_data%grv)
+        call sqlite_insert_row_add_real(wet_out_data%temp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_wetland
+      
+      !> Insert LSU water balance data into SQLite
+      subroutine sqlite_insert_lsu_wb(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, wb_data)
+        use output_landscape_module, only : output_waterbal
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(output_waterbal), intent(in) :: wb_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(53)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "lsunit_wb_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "precip", "snofall", "snomlt", "surq_gen", "latq", "wateryld", "perc", "et", &
+                     "ecanopy", "eplant", "esoil", "surq_cont", "cn", "sw_init", "sw_final", "sw", &
+                     "sw_300", "sno_init", "sno_final", "snopack", "pet", "qtile", "irr", "surq_runon", &
+                     "latq_runon", "overbank", "surq_cha", "surq_res", "surq_ls", "latq_cha", "latq_res", &
+                     "latq_ls", "gwsoil", "satex", "satex_chan", "delsw", "lagsurf", "laglatq", "lagsatex", &
+                     "wet_evap", "wet_out", "wet_stor", "null1", "null2", "null3", "null4"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(wb_data%precip)
+        call sqlite_insert_row_add_real(wb_data%snofall)
+        call sqlite_insert_row_add_real(wb_data%snomlt)
+        call sqlite_insert_row_add_real(wb_data%surq_gen)
+        call sqlite_insert_row_add_real(wb_data%latq)
+        call sqlite_insert_row_add_real(wb_data%wateryld)
+        call sqlite_insert_row_add_real(wb_data%perc)
+        call sqlite_insert_row_add_real(wb_data%et)
+        call sqlite_insert_row_add_real(wb_data%ecanopy)
+        call sqlite_insert_row_add_real(wb_data%eplant)
+        call sqlite_insert_row_add_real(wb_data%esoil)
+        call sqlite_insert_row_add_real(wb_data%surq_cont)
+        call sqlite_insert_row_add_real(wb_data%cn)
+        call sqlite_insert_row_add_real(wb_data%sw_init)
+        call sqlite_insert_row_add_real(wb_data%sw_final)
+        call sqlite_insert_row_add_real(wb_data%sw)
+        call sqlite_insert_row_add_real(wb_data%sw_300)
+        call sqlite_insert_row_add_real(wb_data%sno_init)
+        call sqlite_insert_row_add_real(wb_data%sno_final)
+        call sqlite_insert_row_add_real(wb_data%snopack)
+        call sqlite_insert_row_add_real(wb_data%pet)
+        call sqlite_insert_row_add_real(wb_data%qtile)
+        call sqlite_insert_row_add_real(wb_data%irr)
+        call sqlite_insert_row_add_real(wb_data%surq_runon)
+        call sqlite_insert_row_add_real(wb_data%latq_runon)
+        call sqlite_insert_row_add_real(wb_data%overbank)
+        call sqlite_insert_row_add_real(wb_data%surq_cha)
+        call sqlite_insert_row_add_real(wb_data%surq_res)
+        call sqlite_insert_row_add_real(wb_data%surq_ls)
+        call sqlite_insert_row_add_real(wb_data%latq_cha)
+        call sqlite_insert_row_add_real(wb_data%latq_res)
+        call sqlite_insert_row_add_real(wb_data%latq_ls)
+        call sqlite_insert_row_add_real(wb_data%gwsoil)
+        call sqlite_insert_row_add_real(wb_data%satex)
+        call sqlite_insert_row_add_real(wb_data%satex_chan)
+        call sqlite_insert_row_add_real(wb_data%delsw)
+        call sqlite_insert_row_add_real(wb_data%lagsurf)
+        call sqlite_insert_row_add_real(wb_data%laglatq)
+        call sqlite_insert_row_add_real(wb_data%lagsatex)
+        call sqlite_insert_row_add_real(wb_data%wet_evap)
+        call sqlite_insert_row_add_real(wb_data%wet_out)
+        call sqlite_insert_row_add_real(wb_data%wet_stor)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_lsu_wb
+      
+      !> Insert LSU nutrient balance data into SQLite  
+      subroutine sqlite_insert_lsu_nb(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, nb_data)
+        use output_landscape_module, only : output_nutbal
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(output_nutbal), intent(in) :: nb_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(27)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "lsunit_nb_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "grazn", "grazp", "lab_min_p", "act_sta_p", "fertn", "fertp", "fixn", "denit", &
+                     "act_nit_n", "act_sta_n", "org_lab_p", "rsd_nitorg_n", "rsd_laborg_p", "no3atmo", &
+                     "nh4atmo", "nuptake", "puptake", "gwsoiln", "gwsoilp", "null1"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(nb_data%grazn)
+        call sqlite_insert_row_add_real(nb_data%grazp)
+        call sqlite_insert_row_add_real(nb_data%lab_min_p)
+        call sqlite_insert_row_add_real(nb_data%act_sta_p)
+        call sqlite_insert_row_add_real(nb_data%fertn)
+        call sqlite_insert_row_add_real(nb_data%fertp)
+        call sqlite_insert_row_add_real(nb_data%fixn)
+        call sqlite_insert_row_add_real(nb_data%denit)
+        call sqlite_insert_row_add_real(nb_data%act_nit_n)
+        call sqlite_insert_row_add_real(nb_data%act_sta_n)
+        call sqlite_insert_row_add_real(nb_data%org_lab_p)
+        call sqlite_insert_row_add_real(nb_data%rsd_nitorg_n)
+        call sqlite_insert_row_add_real(nb_data%rsd_laborg_p)
+        call sqlite_insert_row_add_real(nb_data%no3atmo)
+        call sqlite_insert_row_add_real(nb_data%nh4atmo)
+        call sqlite_insert_row_add_real(nb_data%nuptake)
+        call sqlite_insert_row_add_real(nb_data%puptake)
+        call sqlite_insert_row_add_real(nb_data%gwsoiln)
+        call sqlite_insert_row_add_real(nb_data%gwsoilp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_lsu_nb
+      
+      !> Insert LSU losses data into SQLite
+      subroutine sqlite_insert_lsu_ls(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, ls_data)
+        use output_landscape_module, only : output_losses
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(output_losses), intent(in) :: ls_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(19)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "lsunit_ls_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "sedyld", "sedorgn", "sedorgp", "surqno3", "latno3", "surqsolp", "usle", &
+                     "sedminp", "tileno3", "lchlabp", "tilelabp", "satexn"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(ls_data%sedyld)
+        call sqlite_insert_row_add_real(ls_data%sedorgn)
+        call sqlite_insert_row_add_real(ls_data%sedorgp)
+        call sqlite_insert_row_add_real(ls_data%surqno3)
+        call sqlite_insert_row_add_real(ls_data%latno3)
+        call sqlite_insert_row_add_real(ls_data%surqsolp)
+        call sqlite_insert_row_add_real(ls_data%usle)
+        call sqlite_insert_row_add_real(ls_data%sedminp)
+        call sqlite_insert_row_add_real(ls_data%tileno3)
+        call sqlite_insert_row_add_real(ls_data%lchlabp)
+        call sqlite_insert_row_add_real(ls_data%tilelabp)
+        call sqlite_insert_row_add_real(ls_data%satexn)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_lsu_ls
+      
+      !> Insert LSU plant weather data into SQLite
+      subroutine sqlite_insert_lsu_pw(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, pw_data)
+        use output_landscape_module, only : output_plantweather
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(output_plantweather), intent(in) :: pw_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(32)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "lsunit_pw_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "lai", "bioms", "yield", "residue", "sol_tmp", "strsw", "strsa", "strstmp", &
+                     "strsn", "strsp", "strss", "nplnt", "percn", "pplnt", "tmx", "tmn", "tmpav", &
+                     "solrad", "wndspd", "rhum", "phubase0", "lai_max", "bm_max", "bm_grow", "c_gro"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(pw_data%lai)
+        call sqlite_insert_row_add_real(pw_data%bioms)
+        call sqlite_insert_row_add_real(pw_data%yield)
+        call sqlite_insert_row_add_real(pw_data%residue)
+        call sqlite_insert_row_add_real(pw_data%sol_tmp)
+        call sqlite_insert_row_add_real(pw_data%strsw)
+        call sqlite_insert_row_add_real(pw_data%strsa)
+        call sqlite_insert_row_add_real(pw_data%strstmp)
+        call sqlite_insert_row_add_real(pw_data%strsn)
+        call sqlite_insert_row_add_real(pw_data%strsp)
+        call sqlite_insert_row_add_real(pw_data%strss)
+        call sqlite_insert_row_add_real(pw_data%nplnt)
+        call sqlite_insert_row_add_real(pw_data%percn)
+        call sqlite_insert_row_add_real(pw_data%pplnt)
+        call sqlite_insert_row_add_real(pw_data%tmx)
+        call sqlite_insert_row_add_real(pw_data%tmn)
+        call sqlite_insert_row_add_real(pw_data%tmpav)
+        call sqlite_insert_row_add_real(pw_data%solrad)
+        call sqlite_insert_row_add_real(pw_data%wndspd)
+        call sqlite_insert_row_add_real(pw_data%rhum)
+        call sqlite_insert_row_add_real(pw_data%phubase0)
+        call sqlite_insert_row_add_real(pw_data%lai_max)
+        call sqlite_insert_row_add_real(pw_data%bm_max)
+        call sqlite_insert_row_add_real(pw_data%bm_grow)
+        call sqlite_insert_row_add_real(pw_data%c_gro)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_lsu_pw
+      
+      !> Insert recall data into SQLite
+      subroutine sqlite_insert_recall(period, jday, mon, day_mo, yrc, name, typ, rec_data)
+        use hydrograph_module, only : hyd_output
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc
+        character(len=*), intent(in) :: name, typ
+        type(hyd_output), intent(in) :: rec_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(27)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "recall_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "name", "typ", &
+                     "flo", "sed", "orgn", "sedp", "no3", "solp", "chla", "nh3", "no2", &
+                     "cbod", "dox", "san", "sil", "cla", "sag", "lag", "grv", "tmp", &
+                     "null1", "null2", "null3"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_text(typ)
+        call sqlite_insert_row_add_real(rec_data%flo)
+        call sqlite_insert_row_add_real(rec_data%sed)
+        call sqlite_insert_row_add_real(rec_data%orgn)
+        call sqlite_insert_row_add_real(rec_data%sedp)
+        call sqlite_insert_row_add_real(rec_data%no3)
+        call sqlite_insert_row_add_real(rec_data%solp)
+        call sqlite_insert_row_add_real(rec_data%chla)
+        call sqlite_insert_row_add_real(rec_data%nh3)
+        call sqlite_insert_row_add_real(rec_data%no2)
+        call sqlite_insert_row_add_real(rec_data%cbod)
+        call sqlite_insert_row_add_real(rec_data%dox)
+        call sqlite_insert_row_add_real(rec_data%san)
+        call sqlite_insert_row_add_real(rec_data%sil)
+        call sqlite_insert_row_add_real(rec_data%cla)
+        call sqlite_insert_row_add_real(rec_data%sag)
+        call sqlite_insert_row_add_real(rec_data%lag)
+        call sqlite_insert_row_add_real(rec_data%grv)
+        call sqlite_insert_row_add_real(rec_data%temp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_recall
+      
+      !> Insert RU data into SQLite
+      subroutine sqlite_insert_ru(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, ru_data)
+        use hydrograph_module, only : hyd_output
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(hyd_output), intent(in) :: ru_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(25)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "ru_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "flo", "sed", "orgn", "sedp", "no3", "solp", "chla", "nh3", "no2", &
+                     "cbod", "dox", "san", "sil", "cla", "sag", "lag", "grv", "tmp"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(ru_data%flo)
+        call sqlite_insert_row_add_real(ru_data%sed)
+        call sqlite_insert_row_add_real(ru_data%orgn)
+        call sqlite_insert_row_add_real(ru_data%sedp)
+        call sqlite_insert_row_add_real(ru_data%no3)
+        call sqlite_insert_row_add_real(ru_data%solp)
+        call sqlite_insert_row_add_real(ru_data%chla)
+        call sqlite_insert_row_add_real(ru_data%nh3)
+        call sqlite_insert_row_add_real(ru_data%no2)
+        call sqlite_insert_row_add_real(ru_data%cbod)
+        call sqlite_insert_row_add_real(ru_data%dox)
+        call sqlite_insert_row_add_real(ru_data%san)
+        call sqlite_insert_row_add_real(ru_data%sil)
+        call sqlite_insert_row_add_real(ru_data%cla)
+        call sqlite_insert_row_add_real(ru_data%sag)
+        call sqlite_insert_row_add_real(ru_data%lag)
+        call sqlite_insert_row_add_real(ru_data%grv)
+        call sqlite_insert_row_add_real(ru_data%temp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_ru
+      
+      !> Insert hydin/hydout data into SQLite
+      subroutine sqlite_insert_hyd(period, direction, jday, mon, day_mo, yrc, unit_id, gis_id, name, typ, hyd_data)
+        use hydrograph_module, only : hyd_output
+        
+        character(len=*), intent(in) :: period, direction
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name, typ
+        type(hyd_output), intent(in) :: hyd_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(26)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "hyd" // trim(direction) // "_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", "typ", &
+                     "flo", "sed", "orgn", "sedp", "no3", "solp", "chla", "nh3", "no2", &
+                     "cbod", "dox", "san", "sil", "cla", "sag", "lag", "grv", "tmp"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_text(typ)
+        call sqlite_insert_row_add_real(hyd_data%flo)
+        call sqlite_insert_row_add_real(hyd_data%sed)
+        call sqlite_insert_row_add_real(hyd_data%orgn)
+        call sqlite_insert_row_add_real(hyd_data%sedp)
+        call sqlite_insert_row_add_real(hyd_data%no3)
+        call sqlite_insert_row_add_real(hyd_data%solp)
+        call sqlite_insert_row_add_real(hyd_data%chla)
+        call sqlite_insert_row_add_real(hyd_data%nh3)
+        call sqlite_insert_row_add_real(hyd_data%no2)
+        call sqlite_insert_row_add_real(hyd_data%cbod)
+        call sqlite_insert_row_add_real(hyd_data%dox)
+        call sqlite_insert_row_add_real(hyd_data%san)
+        call sqlite_insert_row_add_real(hyd_data%sil)
+        call sqlite_insert_row_add_real(hyd_data%cla)
+        call sqlite_insert_row_add_real(hyd_data%sag)
+        call sqlite_insert_row_add_real(hyd_data%lag)
+        call sqlite_insert_row_add_real(hyd_data%grv)
+        call sqlite_insert_row_add_real(hyd_data%temp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_hyd
+      
+      !> Insert deposition data into SQLite
+      subroutine sqlite_insert_deposition(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, atmo_data)
+        use output_landscape_module, only : output_nutbal
+        
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer*8, intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(output_nutbal), intent(in) :: atmo_data
+        character(len=32) :: table_name
+        character(len=16) :: col_names(9)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "deposition_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "no3atmo", "nh4atmo"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(atmo_data%no3atmo)
+        call sqlite_insert_row_add_real(atmo_data%nh4atmo)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_deposition
+      
+      !! ================== SD_CHANMORPH ===================
+      subroutine sqlite_insert_sd_chanmorph(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, chsd_data)
+        use sd_channel_module, only: sd_ch_output
         implicit none
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer(8), intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(sd_ch_output), intent(in) :: chsd_data
         
-        call sqlite_finalize()
-        write(*,*) "SQLite output database finalized."
+        character(len=64) :: table_name
+        character(len=16) :: col_names(32)
         
-      end subroutine sqlite_finalize_output
+        if (.not. sqlite_initialized) return
+        
+        table_name = "channel_sdmorph_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "flo_in", "aqu_in", "flo_out", "peakr", "sed_in", "sed_out", "washld", "bedld", &
+                     "dep", "deg_btm", "deg_bank", "hc_sed", "width", "depth", "slope", &
+                     "deg_btm_m", "deg_bank_m", "hc_len", "flo_in_mm", "aqu_in_mm", "flo_out_mm", &
+                     "sed_stor", "n_tot", "p_tot", "dep_bf"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(chsd_data%flo_in)
+        call sqlite_insert_row_add_real(chsd_data%aqu_in)
+        call sqlite_insert_row_add_real(chsd_data%flo)
+        call sqlite_insert_row_add_real(chsd_data%peakr)
+        call sqlite_insert_row_add_real(chsd_data%sed_in)
+        call sqlite_insert_row_add_real(chsd_data%sed_out)
+        call sqlite_insert_row_add_real(chsd_data%washld)
+        call sqlite_insert_row_add_real(chsd_data%bedld)
+        call sqlite_insert_row_add_real(chsd_data%dep)
+        call sqlite_insert_row_add_real(chsd_data%deg_btm)
+        call sqlite_insert_row_add_real(chsd_data%deg_bank)
+        call sqlite_insert_row_add_real(chsd_data%hc_sed)
+        call sqlite_insert_row_add_real(chsd_data%width)
+        call sqlite_insert_row_add_real(chsd_data%depth)
+        call sqlite_insert_row_add_real(chsd_data%slope)
+        call sqlite_insert_row_add_real(chsd_data%deg_btm_m)
+        call sqlite_insert_row_add_real(chsd_data%deg_bank_m)
+        call sqlite_insert_row_add_real(chsd_data%hc_m)
+        call sqlite_insert_row_add_real(chsd_data%flo_in_mm)
+        call sqlite_insert_row_add_real(chsd_data%aqu_in_mm)
+        call sqlite_insert_row_add_real(chsd_data%flo_mm)
+        call sqlite_insert_row_add_real(chsd_data%sed_stor)
+        call sqlite_insert_row_add_real(chsd_data%n_tot)
+        call sqlite_insert_row_add_real(chsd_data%p_tot)
+        call sqlite_insert_row_add_real(chsd_data%dep_bf)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_sd_chanmorph
+      
+      !! ================== BASIN_SD_CHANMORPH ===================
+      subroutine sqlite_insert_basin_sd_chanmorph(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, chsd_data)
+        use sd_channel_module, only: sd_ch_output
+        implicit none
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer(8), intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(sd_ch_output), intent(in) :: chsd_data
+        
+        character(len=64) :: table_name
+        character(len=16) :: col_names(32)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "basin_sd_chamorph_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "flo_in", "aqu_in", "flo_out", "peakr", "sed_in", "sed_out", "washld", "bedld", &
+                     "dep", "deg_btm", "deg_bank", "hc_sed", "width", "depth", "slope", &
+                     "deg_btm_m", "deg_bank_m", "hc_len", "flo_in_mm", "aqu_in_mm", "flo_out_mm", &
+                     "sed_stor", "n_tot", "p_tot", "dep_bf"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(chsd_data%flo_in)
+        call sqlite_insert_row_add_real(chsd_data%aqu_in)
+        call sqlite_insert_row_add_real(chsd_data%flo)
+        call sqlite_insert_row_add_real(chsd_data%peakr)
+        call sqlite_insert_row_add_real(chsd_data%sed_in)
+        call sqlite_insert_row_add_real(chsd_data%sed_out)
+        call sqlite_insert_row_add_real(chsd_data%washld)
+        call sqlite_insert_row_add_real(chsd_data%bedld)
+        call sqlite_insert_row_add_real(chsd_data%dep)
+        call sqlite_insert_row_add_real(chsd_data%deg_btm)
+        call sqlite_insert_row_add_real(chsd_data%deg_bank)
+        call sqlite_insert_row_add_real(chsd_data%hc_sed)
+        call sqlite_insert_row_add_real(chsd_data%width)
+        call sqlite_insert_row_add_real(chsd_data%depth)
+        call sqlite_insert_row_add_real(chsd_data%slope)
+        call sqlite_insert_row_add_real(chsd_data%deg_btm_m)
+        call sqlite_insert_row_add_real(chsd_data%deg_bank_m)
+        call sqlite_insert_row_add_real(chsd_data%hc_m)
+        call sqlite_insert_row_add_real(chsd_data%flo_in_mm)
+        call sqlite_insert_row_add_real(chsd_data%aqu_in_mm)
+        call sqlite_insert_row_add_real(chsd_data%flo_mm)
+        call sqlite_insert_row_add_real(chsd_data%sed_stor)
+        call sqlite_insert_row_add_real(chsd_data%n_tot)
+        call sqlite_insert_row_add_real(chsd_data%p_tot)
+        call sqlite_insert_row_add_real(chsd_data%dep_bf)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_basin_sd_chanmorph
+      
+      !! ================== SD_CHANBUD ===================
+      subroutine sqlite_insert_sd_chanbud(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, bud_data)
+        use sd_channel_module, only: channel_sediment_budget_output
+        implicit none
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer(8), intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(channel_sediment_budget_output), intent(in) :: bud_data
+        
+        character(len=64) :: table_name
+        character(len=16) :: col_names(37)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "sd_chanbud_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "in_sed", "out_sed", "fp_dep", "ch_dep", "bank_ero", "bed_ero", &
+                     "in_no3", "in_orgn", "out_no3", "out_orgn", "fp_no3", "bank_no3", &
+                     "bed_no3", "fp_orgn", "ch_orgn", "bank_orgn", "bed_orgn", &
+                     "in_solp", "in_orgp", "out_solp", "out_orgp", "fp_solp", "bank_solp", &
+                     "bed_solp", "fp_orgp", "ch_orgp", "bank_orgp", "bed_orgp", &
+                     "no3_orgn", "solp_orgp"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(bud_data%in_sed)
+        call sqlite_insert_row_add_real(bud_data%out_sed)
+        call sqlite_insert_row_add_real(bud_data%fp_dep)
+        call sqlite_insert_row_add_real(bud_data%ch_dep)
+        call sqlite_insert_row_add_real(bud_data%bank_ero)
+        call sqlite_insert_row_add_real(bud_data%bed_ero)
+        call sqlite_insert_row_add_real(bud_data%in_no3)
+        call sqlite_insert_row_add_real(bud_data%in_orgn)
+        call sqlite_insert_row_add_real(bud_data%out_no3)
+        call sqlite_insert_row_add_real(bud_data%out_orgn)
+        call sqlite_insert_row_add_real(bud_data%fp_no3)
+        call sqlite_insert_row_add_real(bud_data%bank_no3)
+        call sqlite_insert_row_add_real(bud_data%bed_no3)
+        call sqlite_insert_row_add_real(bud_data%fp_orgn)
+        call sqlite_insert_row_add_real(bud_data%ch_orgn)
+        call sqlite_insert_row_add_real(bud_data%bank_orgn)
+        call sqlite_insert_row_add_real(bud_data%bed_orgn)
+        call sqlite_insert_row_add_real(bud_data%in_solp)
+        call sqlite_insert_row_add_real(bud_data%in_orgp)
+        call sqlite_insert_row_add_real(bud_data%out_solp)
+        call sqlite_insert_row_add_real(bud_data%out_orgp)
+        call sqlite_insert_row_add_real(bud_data%fp_solp)
+        call sqlite_insert_row_add_real(bud_data%bank_solp)
+        call sqlite_insert_row_add_real(bud_data%bed_solp)
+        call sqlite_insert_row_add_real(bud_data%fp_orgp)
+        call sqlite_insert_row_add_real(bud_data%ch_orgp)
+        call sqlite_insert_row_add_real(bud_data%bank_orgp)
+        call sqlite_insert_row_add_real(bud_data%bed_orgp)
+        call sqlite_insert_row_add_real(bud_data%no3_orgn)
+        call sqlite_insert_row_add_real(bud_data%solp_orgp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_sd_chanbud
+      
+      !! ================== BASIN_SD_CHANBUD ===================
+      subroutine sqlite_insert_basin_sd_chanbud(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, bud_data)
+        use sd_channel_module, only: channel_sediment_budget_output
+        implicit none
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer(8), intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(channel_sediment_budget_output), intent(in) :: bud_data
+        
+        character(len=64) :: table_name
+        character(len=16) :: col_names(37)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "basin_sd_chanbud_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "in_sed", "out_sed", "fp_dep", "ch_dep", "bank_ero", "bed_ero", &
+                     "in_no3", "in_orgn", "out_no3", "out_orgn", "fp_no3", "bank_no3", &
+                     "bed_no3", "fp_orgn", "ch_orgn", "bank_orgn", "bed_orgn", &
+                     "in_solp", "in_orgp", "out_solp", "out_orgp", "fp_solp", "bank_solp", &
+                     "bed_solp", "fp_orgp", "ch_orgp", "bank_orgp", "bed_orgp", &
+                     "no3_orgn", "solp_orgp"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        call sqlite_insert_row_add_real(bud_data%in_sed)
+        call sqlite_insert_row_add_real(bud_data%out_sed)
+        call sqlite_insert_row_add_real(bud_data%fp_dep)
+        call sqlite_insert_row_add_real(bud_data%ch_dep)
+        call sqlite_insert_row_add_real(bud_data%bank_ero)
+        call sqlite_insert_row_add_real(bud_data%bed_ero)
+        call sqlite_insert_row_add_real(bud_data%in_no3)
+        call sqlite_insert_row_add_real(bud_data%in_orgn)
+        call sqlite_insert_row_add_real(bud_data%out_no3)
+        call sqlite_insert_row_add_real(bud_data%out_orgn)
+        call sqlite_insert_row_add_real(bud_data%fp_no3)
+        call sqlite_insert_row_add_real(bud_data%bank_no3)
+        call sqlite_insert_row_add_real(bud_data%bed_no3)
+        call sqlite_insert_row_add_real(bud_data%fp_orgn)
+        call sqlite_insert_row_add_real(bud_data%ch_orgn)
+        call sqlite_insert_row_add_real(bud_data%bank_orgn)
+        call sqlite_insert_row_add_real(bud_data%bed_orgn)
+        call sqlite_insert_row_add_real(bud_data%in_solp)
+        call sqlite_insert_row_add_real(bud_data%in_orgp)
+        call sqlite_insert_row_add_real(bud_data%out_solp)
+        call sqlite_insert_row_add_real(bud_data%out_orgp)
+        call sqlite_insert_row_add_real(bud_data%fp_solp)
+        call sqlite_insert_row_add_real(bud_data%bank_solp)
+        call sqlite_insert_row_add_real(bud_data%bed_solp)
+        call sqlite_insert_row_add_real(bud_data%fp_orgp)
+        call sqlite_insert_row_add_real(bud_data%ch_orgp)
+        call sqlite_insert_row_add_real(bud_data%bank_orgp)
+        call sqlite_insert_row_add_real(bud_data%bed_orgp)
+        call sqlite_insert_row_add_real(bud_data%no3_orgn)
+        call sqlite_insert_row_add_real(bud_data%solp_orgp)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_basin_sd_chanbud
+      
+      !! ================== BASIN_RES ===================
+      subroutine sqlite_insert_basin_res(period, jday, mon, day_mo, yrc, unit_id, gis_id, name, &
+                                         wat_data, res_data, res_in, res_out)
+        use hydrograph_module, only: hyd_output
+        use water_body_module, only: water_body
+        implicit none
+        character(len=*), intent(in) :: period
+        integer, intent(in) :: jday, mon, day_mo, yrc, unit_id
+        integer(8), intent(in) :: gis_id
+        character(len=*), intent(in) :: name
+        type(water_body), intent(in) :: wat_data
+        type(hyd_output), intent(in) :: res_data, res_in, res_out
+        
+        character(len=64) :: table_name
+        character(len=16) :: col_names(62)
+        
+        if (.not. sqlite_initialized) return
+        
+        table_name = "basin_res_" // trim(period)
+        
+        col_names = [character(len=16) :: "jday", "mon", "day", "yr", "unit", "gis_id", "name", &
+                     "area", "precip", "evap", "seep", &
+                     "flo_stor", "sed_stor", "orgn_stor", "sedp_stor", "no3_stor", &
+                     "solp_stor", "chla_stor", "nh3_stor", "no2_stor", "cbod_stor", &
+                     "dox_stor", "san_stor", "sil_stor", "cla_stor", "sag_stor", &
+                     "lag_stor", "grv_stor", &
+                     "flo_in", "sed_in", "orgn_in", "sedp_in", "no3_in", &
+                     "solp_in", "chla_in", "nh3_in", "no2_in", "cbod_in", "dox_in", &
+                     "san_in", "sil_in", "cla_in", "sag_in", "lag_in", "grv_in", &
+                     "flo_out", "sed_out", "orgn_out", "sedp_out", "no3_out", &
+                     "solp_out", "chla_out", "nh3_out", "no2_out", "cbod_out", "dox_out", &
+                     "san_out", "sil_out", "cla_out", "sag_out", "lag_out", "grv_out"]
+        
+        call sqlite_insert_row_start_named(trim(table_name), col_names)
+        call sqlite_insert_row_add_int(jday)
+        call sqlite_insert_row_add_int(mon)
+        call sqlite_insert_row_add_int(day_mo)
+        call sqlite_insert_row_add_int(yrc)
+        call sqlite_insert_row_add_int(unit_id)
+        call sqlite_insert_row_add_int8(gis_id)
+        call sqlite_insert_row_add_text(name)
+        ! water body data
+        call sqlite_insert_row_add_real(wat_data%area_ha)
+        call sqlite_insert_row_add_real(wat_data%precip)
+        call sqlite_insert_row_add_real(wat_data%evap)
+        call sqlite_insert_row_add_real(wat_data%seep)
+        ! storage
+        call sqlite_insert_row_add_real(res_data%flo)
+        call sqlite_insert_row_add_real(res_data%sed)
+        call sqlite_insert_row_add_real(res_data%orgn)
+        call sqlite_insert_row_add_real(res_data%sedp)
+        call sqlite_insert_row_add_real(res_data%no3)
+        call sqlite_insert_row_add_real(res_data%solp)
+        call sqlite_insert_row_add_real(res_data%chla)
+        call sqlite_insert_row_add_real(res_data%nh3)
+        call sqlite_insert_row_add_real(res_data%no2)
+        call sqlite_insert_row_add_real(res_data%cbod)
+        call sqlite_insert_row_add_real(res_data%dox)
+        call sqlite_insert_row_add_real(res_data%san)
+        call sqlite_insert_row_add_real(res_data%sil)
+        call sqlite_insert_row_add_real(res_data%cla)
+        call sqlite_insert_row_add_real(res_data%sag)
+        call sqlite_insert_row_add_real(res_data%lag)
+        call sqlite_insert_row_add_real(res_data%grv)
+        ! inflows
+        call sqlite_insert_row_add_real(res_in%flo)
+        call sqlite_insert_row_add_real(res_in%sed)
+        call sqlite_insert_row_add_real(res_in%orgn)
+        call sqlite_insert_row_add_real(res_in%sedp)
+        call sqlite_insert_row_add_real(res_in%no3)
+        call sqlite_insert_row_add_real(res_in%solp)
+        call sqlite_insert_row_add_real(res_in%chla)
+        call sqlite_insert_row_add_real(res_in%nh3)
+        call sqlite_insert_row_add_real(res_in%no2)
+        call sqlite_insert_row_add_real(res_in%cbod)
+        call sqlite_insert_row_add_real(res_in%dox)
+        call sqlite_insert_row_add_real(res_in%san)
+        call sqlite_insert_row_add_real(res_in%sil)
+        call sqlite_insert_row_add_real(res_in%cla)
+        call sqlite_insert_row_add_real(res_in%sag)
+        call sqlite_insert_row_add_real(res_in%lag)
+        call sqlite_insert_row_add_real(res_in%grv)
+        ! outflows
+        call sqlite_insert_row_add_real(res_out%flo)
+        call sqlite_insert_row_add_real(res_out%sed)
+        call sqlite_insert_row_add_real(res_out%orgn)
+        call sqlite_insert_row_add_real(res_out%sedp)
+        call sqlite_insert_row_add_real(res_out%no3)
+        call sqlite_insert_row_add_real(res_out%solp)
+        call sqlite_insert_row_add_real(res_out%chla)
+        call sqlite_insert_row_add_real(res_out%nh3)
+        call sqlite_insert_row_add_real(res_out%no2)
+        call sqlite_insert_row_add_real(res_out%cbod)
+        call sqlite_insert_row_add_real(res_out%dox)
+        call sqlite_insert_row_add_real(res_out%san)
+        call sqlite_insert_row_add_real(res_out%sil)
+        call sqlite_insert_row_add_real(res_out%cla)
+        call sqlite_insert_row_add_real(res_out%sag)
+        call sqlite_insert_row_add_real(res_out%lag)
+        call sqlite_insert_row_add_real(res_out%grv)
+        call sqlite_insert_row_execute()
+        
+      end subroutine sqlite_insert_basin_res
+      
+      end module sqlite_output_module
 #endif
