@@ -101,13 +101,13 @@ if(ENABLE_NETCDF)
     find_library(NETCDF_C_LIBRARY NAMES libnetcdf.a netcdf 
                  HINTS ${NETCDF_ROOT} ENV NETCDF_DIR 
                  PATH_SUFFIXES lib lib64)
-    find_library(HDF5_HL_LIBRARY NAMES libhdf5_hl.a hdf5_hl 
+    find_library(HDF5_HL_LIBRARY NAMES libhdf5_hl.a libhdf5_hl hdf5_hl 
                  HINTS ${NETCDF_ROOT} ENV HDF5_DIR 
                  PATH_SUFFIXES lib lib64)
-    find_library(HDF5_LIBRARY NAMES libhdf5.a hdf5 
+    find_library(HDF5_LIBRARY NAMES libhdf5.a libhdf5 hdf5 
                  HINTS ${NETCDF_ROOT} ENV HDF5_DIR 
                  PATH_SUFFIXES lib lib64)
-    find_library(ZLIB_LIBRARY NAMES libz.a z 
+    find_library(ZLIB_LIBRARY NAMES zlibstatic zlib libz.a z 
                  HINTS ${NETCDF_ROOT} 
                  PATH_SUFFIXES lib lib64)
     find_path(NETCDF_C_INCLUDE NAMES netcdf.h 
@@ -132,6 +132,9 @@ if(ENABLE_NETCDF)
     # Add system libraries needed for static linking
     if(UNIX)
         list(APPEND NETCDF_LIBRARIES dl m)
+    elseif(WIN32)
+        # Windows system libraries needed by HDF5
+        list(APPEND NETCDF_LIBRARIES Shlwapi)
     endif()
     
     message(STATUS "NetCDF C library: ${NETCDF_C_LIBRARY}")
@@ -147,7 +150,14 @@ endif()
 
 # SWAT Version number
 set(SWAT_VERSION ${TAG})
-set(SWATPLUS_EXE "swatplus-${SWAT_VERSION}-${FFC}-${AR}${TY}${NETCDF_SUFFIX}")
+
+# Allow custom executable name, otherwise use auto-generated name
+set(CUSTOM_EXE_NAME "" CACHE STRING "Custom executable name (leave empty for auto-generated name)")
+if(CUSTOM_EXE_NAME)
+    set(SWATPLUS_EXE "${CUSTOM_EXE_NAME}")
+else()
+    set(SWATPLUS_EXE "swatplus-${SWAT_VERSION}-${FFC}-${AR}${TY}${NETCDF_SUFFIX}")
+endif()
 
 # Set this to 'TRUE' to see the fortran command on compile
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
@@ -240,16 +250,32 @@ endif()
 
 file(GLOB sources src/*.f90)
 
-# Add bundled SQLite3 source if enabled
+# Build SQLite3 as a static library first if using bundled source
 if(ENABLE_SQLITE AND USE_BUNDLED_SQLITE AND USE_BUNDLED_SQLITE_FOUND)
-    add_executable(${SWATPLUS_EXE} ${sources} ${SQLITE3_SOURCE})
+    # Create a static library from sqlite3.c
+    add_library(sqlite3_lib STATIC ${SQLITE3_SOURCE})
+    target_include_directories(sqlite3_lib PUBLIC ${SQLITE3_INCLUDE_DIR})
+    # SQLite compile options for better performance
+    target_compile_definitions(sqlite3_lib PRIVATE 
+        SQLITE_THREADSAFE=0
+        SQLITE_OMIT_LOAD_EXTENSION
+    )
+    set_target_properties(sqlite3_lib PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+        C_STANDARD 99
+    )
+endif()
+
+# Create the main executable (Fortran only)
+add_executable(${SWATPLUS_EXE} ${sources})
+
+# Link SQLite library if enabled
+if(ENABLE_SQLITE AND USE_BUNDLED_SQLITE AND USE_BUNDLED_SQLITE_FOUND)
+    target_link_libraries(${SWATPLUS_EXE} PRIVATE sqlite3_lib)
     target_include_directories(${SWATPLUS_EXE} PRIVATE ${SQLITE3_INCLUDE_DIR})
 elseif(ENABLE_SQLITE AND SQLITE3_LIBRARY)
-    add_executable(${SWATPLUS_EXE} ${sources})
-    target_link_libraries(${SWATPLUS_EXE} ${SQLITE3_LIBRARY})
+    target_link_libraries(${SWATPLUS_EXE} PRIVATE ${SQLITE3_LIBRARY})
     target_include_directories(${SWATPLUS_EXE} PRIVATE ${SQLITE3_INCLUDE_DIR})
-else()
-    add_executable(${SWATPLUS_EXE} ${sources})
 endif()
 
 # NetCDF configuration

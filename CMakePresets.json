@@ -357,6 +357,106 @@
                 "CMAKE_Fortran_COMPILER": "ifort",
                 "ENABLE_NETCDF": "ON"
             }
+        },
+        {
+            "name": "ifx_debug_sqlite_nc",
+            "displayName": "ifx debug with SQLite and NetCDF",
+            "description": "Builds ifx debug executable with both SQLite output and NetCDF climate input support",
+            "binaryDir": "build/debug-sqlite-nc",
+            "generator": "Visual Studio 17 2022",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "build/debug-sqlite-nc",
+                "CMAKE_Fortran_COMPILER": "ifx",
+                "CMAKE_C_COMPILER": "cl",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON",
+                "ENABLE_NETCDF": "ON",
+                "NETCDF_ROOT": "$penv{NETCDF_ROOT}"
+            }
+        },
+        {
+            "name": "gfortran_debug_sqlite_nc_linux",
+            "displayName": "gfortran debug with SQLite and NetCDF (Linux)",
+            "description": "Builds gfortran debug executable with both SQLite output and NetCDF climate input support for Linux",
+            "binaryDir": "build/debug-sqlite-nc",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "build/debug-sqlite-nc",
+                "CMAKE_Fortran_COMPILER": "gfortran",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON",
+                "ENABLE_NETCDF": "ON"
+            }
+        },
+        {
+            "name": "ifx_release_sqlite_nc",
+            "displayName": "ifx release with SQLite and NetCDF",
+            "description": "Builds ifx release executable with both SQLite output and NetCDF climate input support",
+            "binaryDir": "build/release-sqlite-nc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "build/release-sqlite-nc",
+                "CMAKE_Fortran_COMPILER": "ifx",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON",
+                "ENABLE_NETCDF": "ON",
+                "NETCDF_ROOT": "$penv{NETCDF_ROOT}"
+            }
+        },
+        {
+            "name": "ifort_debug_sqlite_nc",
+            "displayName": "ifort debug with SQLite and NetCDF",
+            "description": "Builds ifort debug executable with both SQLite output and NetCDF climate input support",
+            "binaryDir": "build/debug-sqlite-nc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "build/debug-sqlite-nc",
+                "CMAKE_Fortran_COMPILER": "ifort",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON",
+                "ENABLE_NETCDF": "ON",
+                "NETCDF_ROOT": "$penv{NETCDF_ROOT}"
+            }
+        },
+        {
+            "name": "ifort_release_sqlite_nc",
+            "displayName": "ifort release with SQLite and NetCDF",
+            "description": "Builds ifort release executable with both SQLite output and NetCDF climate input support",
+            "binaryDir": "build/release-sqlite-nc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "build/release-sqlite-nc",
+                "CMAKE_Fortran_COMPILER": "ifort",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON",
+                "ENABLE_NETCDF": "ON",
+                "NETCDF_ROOT": "$penv{NETCDF_ROOT}"
+            }
+        },
+        {
+            "name": "gfortran_release_sqlite_nc_linux",
+            "displayName": "gfortran release with SQLite and NetCDF (Linux)",
+            "description": "Builds gfortran release executable with both SQLite output and NetCDF climate input support for Linux",
+            "binaryDir": "build/release-sqlite-nc",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "build/release-sqlite-nc",
+                "CMAKE_Fortran_COMPILER": "gfortran",
+                "ENABLE_SQLITE": "ON",
+                "USE_BUNDLED_SQLITE": "ON",
+                "ENABLE_NETCDF": "ON"
+            }
         }
     ]
 }

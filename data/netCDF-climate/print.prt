@@ -3,8 +3,8 @@ nyskip      day_start  yrc_start  day_end   yrc_end   interval
 0           0         0         0         0         1         
 aa_int_cnt  
 0           
-csvout        dbout         cdfout        
-n             n             n             
+csvout        dbout         cdfout        sqliteout      textout
+n             n             n             y              y  
 crop_yld      mgtout        hydcon        fdcout        
 b             n             n             n             
 objects                  daily       monthly        yearly         avann  

@@ -19,7 +19,7 @@
       ! Public procedures
       public :: sqlite3_open, sqlite3_close
       public :: sqlite3_exec, sqlite3_errmsg_ptr, sqlite3_errmsg
-      public :: sqlite3_prepare_v2, sqlite3_step, sqlite3_finalize, sqlite3_reset
+      public :: sqlite3_prepare_v2, sqlite3_step, sqlite3_finalize, sqlite3_reset, sqlite3_clear_bindings
       public :: sqlite3_bind_int, sqlite3_bind_int64, sqlite3_bind_double, sqlite3_bind_text, sqlite3_bind_null
       public :: sqlite3_column_int, sqlite3_column_double, sqlite3_column_text_ptr
       public :: sqlite3_last_insert_rowid
@@ -114,6 +114,13 @@
           type(c_ptr), value :: pStmt
           integer(c_int) :: c_sqlite3_reset
         end function c_sqlite3_reset
+
+        !! Clear all bindings on a prepared statement
+        function c_sqlite3_clear_bindings(pStmt) bind(C, name='sqlite3_clear_bindings')
+          import :: c_ptr, c_int
+          type(c_ptr), value :: pStmt
+          integer(c_int) :: c_sqlite3_clear_bindings
+        end function c_sqlite3_clear_bindings
 
         !! Bind integer value
         function c_sqlite3_bind_int(pStmt, idx, val) bind(C, name='sqlite3_bind_int')
@@ -328,6 +335,14 @@
         
         rc = c_sqlite3_reset(stmt%ptr)
       end function sqlite3_reset
+
+      !> Clear all bindings on a prepared statement
+      function sqlite3_clear_bindings(stmt) result(rc)
+        type(sqlite3_stmt_ptr), intent(in) :: stmt
+        integer(c_int) :: rc
+        
+        rc = c_sqlite3_clear_bindings(stmt%ptr)
+      end function sqlite3_clear_bindings
 
       !> Bind integer value (1-indexed)
       function sqlite3_bind_int(stmt, idx, val) result(rc)

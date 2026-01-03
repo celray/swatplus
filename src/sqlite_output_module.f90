@@ -49,6 +49,12 @@
       character(len=64), save :: created_tables(MAX_TABLES)
       integer, save :: num_created_tables = 0
       
+      ! Prepared statement cache - avoids re-preparing SQL for each row insert
+      ! This is critical for performance: prepare once, reuse with reset()
+      type(sqlite3_stmt_ptr), save :: cached_stmts(MAX_TABLES)
+      character(len=64), save :: cached_stmt_tables(MAX_TABLES)
+      integer, save :: num_cached_stmts = 0
+      
       contains
       
       !> Check if a table has already been created
@@ -75,11 +81,49 @@
         end if
       end subroutine register_table
       
+      !> Find a cached prepared statement for a table
+      !! Returns -1 if not found, otherwise returns index
+      integer function find_cached_stmt(table_name)
+        character(len=*), intent(in) :: table_name
+        integer :: i
+        
+        find_cached_stmt = -1
+        do i = 1, num_cached_stmts
+          if (trim(cached_stmt_tables(i)) == trim(table_name)) then
+            find_cached_stmt = i
+            return
+          end if
+        end do
+      end function find_cached_stmt
+      
+      !> Cache a prepared statement for a table
+      subroutine cache_stmt(table_name, stmt)
+        character(len=*), intent(in) :: table_name
+        type(sqlite3_stmt_ptr), intent(in) :: stmt
+        
+        if (num_cached_stmts < MAX_TABLES) then
+          num_cached_stmts = num_cached_stmts + 1
+          cached_stmt_tables(num_cached_stmts) = trim(table_name)
+          cached_stmts(num_cached_stmts) = stmt
+        end if
+      end subroutine cache_stmt
+      
+      !> Finalize all cached statements (call at shutdown)
+      subroutine finalize_cached_stmts()
+        integer :: i, rc
+        
+        do i = 1, num_cached_stmts
+          rc = sqlite3_finalize(cached_stmts(i))
+        end do
+        num_cached_stmts = 0
+      end subroutine finalize_cached_stmts
+      
       !> Initialize SQLite database
       subroutine sqlite_init(dbname)
         character(len=*), intent(in) :: dbname
         character(len=512) :: full_path
         integer :: rc
+        logical :: file_exists
         
         if (sqlite_initialized) return
         
@@ -88,6 +132,13 @@
           full_path = trim(out_path) // trim(dbname)
         else
           full_path = trim(dbname)
+        end if
+        
+        ! Delete existing database file to start fresh
+        inquire(file=trim(full_path), exist=file_exists)
+        if (file_exists) then
+          open(unit=9999, file=trim(full_path), status='old')
+          close(unit=9999, status='delete')
         end if
         
         rc = sqlite3_open(trim(full_path), sqlite_db)
@@ -115,6 +166,9 @@
         integer :: rc
         
         if (.not. sqlite_initialized) return
+        
+        ! Finalize all cached prepared statements before closing
+        call finalize_cached_stmts()
         
         ! End any open transaction
         if (in_transaction) then
@@ -192,11 +246,12 @@
       
       !> Start building an INSERT statement with named columns
       !! Creates the table with proper column names if it doesn't exist
+      !! Uses cached prepared statements for performance - prepare once, reuse many times
       subroutine sqlite_insert_row_start_named(table_name, col_names)
         character(len=*), intent(in) :: table_name
         character(len=*), intent(in) :: col_names(:)
         character(len=8192) :: sql
-        integer :: i, n, rc
+        integer :: i, n, rc, stmt_idx
         
         if (.not. sqlite_initialized) return
         
@@ -213,18 +268,32 @@
           call register_table(table_name)
         end if
         
-        ! Build parameterized INSERT statement
-        sql = "INSERT INTO """ // trim(table_name) // """ VALUES (?"
-        do i = 2, n
-          sql = trim(sql) // ",?"
-        end do
-        sql = trim(sql) // ");"
+        ! Check if we have a cached prepared statement for this table
+        stmt_idx = find_cached_stmt(table_name)
         
-        ! Prepare statement
-        rc = sqlite3_prepare_v2(sqlite_db, trim(sql), current_stmt)
-        if (rc /= SQLITE_OK) then
-          write(*,*) "Error preparing insert for: ", trim(table_name)
-          write(*,*) "SQLite error: ", trim(sqlite3_errmsg(sqlite_db))
+        if (stmt_idx > 0) then
+          ! Reuse cached statement - just reset it (FAST!)
+          current_stmt = cached_stmts(stmt_idx)
+          rc = sqlite3_reset(current_stmt)
+          rc = sqlite3_clear_bindings(current_stmt)
+        else
+          ! First time for this table - prepare and cache the statement
+          ! Build parameterized INSERT statement
+          sql = "INSERT INTO """ // trim(table_name) // """ VALUES (?"
+          do i = 2, n
+            sql = trim(sql) // ",?"
+          end do
+          sql = trim(sql) // ");"
+          
+          ! Prepare statement (expensive, but only done once per table)
+          rc = sqlite3_prepare_v2(sqlite_db, trim(sql), current_stmt)
+          if (rc /= SQLITE_OK) then
+            write(*,*) "Error preparing insert for: ", trim(table_name)
+            write(*,*) "SQLite error: ", trim(sqlite3_errmsg(sqlite_db))
+          else
+            ! Cache it for future reuse
+            call cache_stmt(table_name, current_stmt)
+          end if
         end if
         
         current_bind_idx = 0
@@ -369,6 +438,7 @@
       end subroutine sqlite_insert_row_add_text
       
       !> Execute the current insert statement
+      !! Note: Does NOT finalize the statement - we reuse cached statements
       subroutine sqlite_insert_row_execute()
         integer :: rc
         
@@ -380,7 +450,8 @@
           write(*,*) "SQLite error: ", trim(sqlite3_errmsg(sqlite_db))
         end if
         
-        rc = sqlite3_finalize(current_stmt)
+        ! Don't finalize! Statement is cached and will be reset for reuse
+        ! rc = sqlite3_finalize(current_stmt)  ! OLD: was slow!
         current_bind_idx = 0
         
         ! Auto-commit transaction after batch size
