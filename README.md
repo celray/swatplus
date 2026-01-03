@@ -1,4 +1,5 @@
 [![Release](https://img.shields.io/github/release/swat-model/swatplus.svg?style=flat-square)](https://github.com/swat-model/swatplus/releases)
+
 # SWAT+
 
 The **Soil and Water Assessment Tool Plus** [SWAT+](https://swatplus.gitbook.io/docs) is an open source model jointly developed by the USDA Agricultural Research Service ([USDA-ARS](http://ars.usda.gov)) and Texas A&M AgriLife Research, part of The Texas A&M University System. Model contributions have been made by Colorado State University and others. SWAT+ is a small watershed to river basin-scale model to simulate the quality and quantity of surface and ground water and predict the environmental impact of land use, land management practices, and climate change. SWAT is widely used in assessing soil erosion prevention and control, non-point source pollution control and regional management in watersheds.
@@ -66,6 +67,26 @@ In addition to CMake, the following tools are also needed:
 
 Use the operating system's preferred way of adding those tools to your installation. There is certainly more than one way of getting and installing them.
 
+<p style="color:orange;">Important: </p>
+
+If you cannot compile successfully, download binaries for the netcdf version [here](https://celray.chawanda.com/assets/downloads/SWATPlusNetCDF_x64.zip). You may need to install [SWAT+ Runtime DLLs](https://celray.chawanda.com/assets/downloads/SWATPlusRuntimeDLLs-v0.0.3.exe) if the executable does not run on your Windows system. These are easier to install on Linux (and Mac OS).
+
+To compile the netcdf version: <br>
+Install netcdf
+- https://downloads.unidata.ucar.edu/netcdf-c/4.9.3/netCDF4.9.3-NC4-64.exe
+
+Install oneAPI Base and Fortran compiler
+- https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html
+- https://www.intel.com/content/www/us/en/developer/tools/oneapi/fortran-compiler-download.html
+
+Create a fortran visual studio project
+- project properties (without the quotes)
+  ```
+  > Fortran > General > Additional Include Directories = 'C:\Program Files\netCDF 4.9.3\include'
+  > Linker > General > Additional Library Directories = 'C:\Program Files\netCDF 4.9.3\lib'
+  > Linker > Input > Additional Dependencies = 'netcdf.lib'
+  ```
+
 __The following sections are emphasizing various development aspects.__
 
 * [Configuring, Building, Installing SWAT+ using cmake](doc/Building.md)
@@ -74,6 +95,8 @@ __The following sections are emphasizing various development aspects.__
 - [Tagging and Versioning](doc/Tagging.md)
 
 - [Developing in Visual Studio](doc/VS-Win.md)
+
+- [Developing with Codespaces Visual Studio Code](doc/VSCode_Codespace.md)
 
 - [FORTRAN Coding Conventions (alpha)](doc/coding_conventions.md)
 

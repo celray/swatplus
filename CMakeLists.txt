@@ -90,9 +90,64 @@ else()
     set(TY "")
 endif()
 
+#############################################################################
+# NetCDF Support Option
+option(ENABLE_NETCDF "Enable NetCDF climate input support" OFF)
+set(NETCDF_ROOT "/usr/local" CACHE PATH "NetCDF installation root directory")
+
+if(ENABLE_NETCDF)
+    # For static linking, NetCDF depends on HDF5, zlib, and system libraries
+    # Find the static libraries in order of dependency
+    find_library(NETCDF_C_LIBRARY NAMES libnetcdf.a netcdf 
+                 HINTS ${NETCDF_ROOT} ENV NETCDF_DIR 
+                 PATH_SUFFIXES lib lib64)
+    find_library(HDF5_HL_LIBRARY NAMES libhdf5_hl.a hdf5_hl 
+                 HINTS ${NETCDF_ROOT} ENV HDF5_DIR 
+                 PATH_SUFFIXES lib lib64)
+    find_library(HDF5_LIBRARY NAMES libhdf5.a hdf5 
+                 HINTS ${NETCDF_ROOT} ENV HDF5_DIR 
+                 PATH_SUFFIXES lib lib64)
+    find_library(ZLIB_LIBRARY NAMES libz.a z 
+                 HINTS ${NETCDF_ROOT} 
+                 PATH_SUFFIXES lib lib64)
+    find_path(NETCDF_C_INCLUDE NAMES netcdf.h 
+              HINTS ${NETCDF_ROOT} ENV NETCDF_DIR 
+              PATH_SUFFIXES include)
+    
+    if(NOT NETCDF_C_LIBRARY)
+        message(FATAL_ERROR "NetCDF C library not found. Set NETCDF_ROOT or NETCDF_DIR environment variable, or disable ENABLE_NETCDF.")
+    endif()
+    
+    # Build the complete list of NetCDF libraries for static linking
+    set(NETCDF_LIBRARIES ${NETCDF_C_LIBRARY})
+    if(HDF5_HL_LIBRARY)
+        list(APPEND NETCDF_LIBRARIES ${HDF5_HL_LIBRARY})
+    endif()
+    if(HDF5_LIBRARY)
+        list(APPEND NETCDF_LIBRARIES ${HDF5_LIBRARY})
+    endif()
+    if(ZLIB_LIBRARY)
+        list(APPEND NETCDF_LIBRARIES ${ZLIB_LIBRARY})
+    endif()
+    # Add system libraries needed for static linking
+    if(UNIX)
+        list(APPEND NETCDF_LIBRARIES dl m)
+    endif()
+    
+    message(STATUS "NetCDF C library: ${NETCDF_C_LIBRARY}")
+    message(STATUS "HDF5 HL library:  ${HDF5_HL_LIBRARY}")
+    message(STATUS "HDF5 library:     ${HDF5_LIBRARY}")
+    message(STATUS "ZLIB library:     ${ZLIB_LIBRARY}")
+    message(STATUS "NetCDF C include: ${NETCDF_C_INCLUDE}")
+    
+    set(NETCDF_SUFFIX "-nc")
+else()
+    set(NETCDF_SUFFIX "")
+endif()
+
 # SWAT Version number
 set(SWAT_VERSION ${TAG})
-set(SWATPLUS_EXE "swatplus-${SWAT_VERSION}-${FFC}-${AR}${TY}")
+set(SWATPLUS_EXE "swatplus-${SWAT_VERSION}-${FFC}-${AR}${TY}${NETCDF_SUFFIX}")
 
 # Set this to 'TRUE' to see the fortran command on compile
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
@@ -197,6 +252,15 @@ else()
     add_executable(${SWATPLUS_EXE} ${sources})
 endif()
 
+# NetCDF configuration
+if(ENABLE_NETCDF)
+    target_compile_definitions(${SWATPLUS_EXE} PRIVATE USE_NETCDF)
+    target_link_libraries(${SWATPLUS_EXE} PRIVATE ${NETCDF_LIBRARIES})
+    if(NETCDF_C_INCLUDE)
+        target_include_directories(${SWATPLUS_EXE} PRIVATE ${NETCDF_C_INCLUDE})
+    endif()
+endif()
+
 #############################################################################
 # Install
 install(TARGETS ${SWATPLUS_EXE} DESTINATION RUNTIME DESTINATION ${PROJECT_SOURCE_DIR})
@@ -240,6 +304,10 @@ if(ENABLE_SQLITE)
     elseif(SQLITE3_LIBRARY)
         message( "-- SQLite3 Library    ${SQLITE3_LIBRARY} (system)")
     endif()
+endif()
+message( "-- NetCDF Support     ${ENABLE_NETCDF}")
+if(ENABLE_NETCDF)
+    message( "--  NetCDF Library    ${NETCDF_C_LIBRARY}")
 endif()
 message( "-- FORD project       ${PROJECT_SOURCE_DIR}/ford.md")
 message( "-- Test Data Dir      ${ref_dir}")
