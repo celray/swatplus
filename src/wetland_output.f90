@@ -11,11 +11,7 @@
       
       implicit none
       
-      
-      
-      
-      external :: soil_carbvar_write, soil_nutcarb_write
-      integer :: j             !none          |hru number
+      integer, intent (in) :: j             !none          |hru number
       real :: const = 0.       !              |constant used for rate, days, etc
       integer :: iob = 0          !                |
       
@@ -95,9 +91,9 @@
               end if
 #endif
           end if
-          wet_in_y(j) = resmz
-          wet_out_y(j) = resmz
-          wet_wat_y(j) = wbodz
+          !wet_in_y(j) = resmz
+          !wet_out_y(j) = resmz
+          !wet_wat_y(j) = wbodz
        end if
 
 !!!!! average annual print

@@ -18,7 +18,7 @@
 
       type organic_mixing_mass
         type (organic_mass) :: tot       !       |total organic pool
-        type (organic_mass) :: rsd       !       |fresh residue-all plants in one pool - layer 1 = surface residue
+        type (organic_mass), dimension(12) :: rsd   !   |fresh residue
         !! humus pools for old mineralization model (static carbon)
         type (organic_mass) :: hact      !       |active humus for old mineralization model
         type (organic_mass) :: hsta      !       |stable humus for old mineralization model
@@ -63,6 +63,10 @@
       type (mineral_phosphorus) :: mpz
       type (mineral_phosphorus) :: mix_mp    !       |mineral p pool used in tillage mixing
       
+      type plant_residue
+        type (organic_mass), dimension(:), allocatable :: rsd       !       |fresh surface residue dimensioned by layer
+      end type plant_residue
+      
       type soil_profile_mass
         character (len=16) :: name = ""
         real :: tot_mn = 0.                                         !       |total mineral n pool (no3+nh4) in soil profile
@@ -79,7 +83,9 @@
         !! tot and rsd used for both carbon methods
         type (organic_mass), dimension(:), allocatable :: tot       !       |total organic pool dimensioned by layer
         type (organic_mass), dimension(:), allocatable :: seq       !       |total sequestered organic pool dimensioned by layer, surface layer = 0.0
-        type (organic_mass), dimension(:), allocatable :: rsd       !       |fresh residue-all plants in one pool by layer - layer 1 = surface residue
+        type (plant_residue), dimension(:), allocatable :: pl       !       |fresh surface residue dimensioned by plant and by layer
+        type (organic_mass), dimension(:), allocatable :: rsd_tot   !       |total fresh surface residue dimensioned by layer
+        type (organic_mass), dimension(:), allocatable :: root_tot   !       |total live roots dimensioned by layer
         !! humus pools for old mineralization model (static carbon)
         type (organic_controls),    dimension(:), allocatable :: org_con_lr  !      |organic contral variables by layer
         type (organic_allocations), dimension(:), allocatable :: org_allo_lr !      |organic allocation variables by layer
@@ -107,6 +113,8 @@
       type (soil_profile_mass), dimension(:), allocatable, target :: soil1
       type (soil_profile_mass), dimension(:), allocatable :: soil1_init
       type (organic_mass) :: soil_prof_tot                          !       |total organic pool for profile (summed by layer)
+      type (organic_mass) :: soil_prof_root                         !       |total live roots for profile (summed by lower layers)
+      real                :: soil_prof_root_frac = 0.0              !       |total live root fraction for profile (summed by lower layers)
       type (organic_mass) :: soil_prof_rsd                          !       |total fresh organic residue pool for profile (summed by lower layers)
       type (organic_mass) :: soil_prof_srsd                         !       |total fresh organic residue pool for surface
       type (organic_mass) :: soil_prof_hact                         !       |total active humus pool for profile (summed by layer)
@@ -151,6 +159,8 @@
        type (organic_mass), dimension(:), allocatable :: seed       !kg/ha      |seed (grain) mass for individual plant in community
        type (organic_mass), dimension(:), allocatable :: yield_tot  !kg/ha      |running total sum of yield at harvest -  ave annual print
        type (organic_mass), dimension(:), allocatable :: yield_yr   !kg/ha      |running yearly sum of yield at harvest - yearly print
+       type (organic_mass), dimension(:), allocatable :: rsd        !kg/ha      |fresh surface residue dimensioned by plant
+       type (organic_mass) :: rsd_tot                               !kg/ha      |total fresh surface residue
        type (organic_mass) :: tot_com                               !kg/ha      |total biomass for entire community
        type (organic_mass) :: ab_gr_com                             !kg/ha      |above ground mass for entire community
        type (organic_mass) :: leaf_com                              !kg/ha      |leaf mass for entire community
