@@ -1,7 +1,9 @@
       subroutine carbon_read
     
       use carbon_module
-      
+      use input_file_module
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: titldum = ""!           |title of file
@@ -14,12 +16,8 @@
       eof = 0
       imax = 0
 
-      inquire (file='basins_carbon.tes', exist=i_exist)
-      if (.not. i_exist) then
-        write (9001,*) "file not found (basins_carbon.tes)"
-       else
+      if (open_file(104, in_carbon%basins_cbn)) then
       do
-        open (104,file='basins_carbon.tes')
         read (104,*,iostat=eof) titldum
         if (eof < 0) exit
         read (104,*,iostat=eof) header

@@ -9,6 +9,7 @@
       use input_file_module
       use hru_module, only : hru_db, ihru, sol_plt_ini, snodb
       use constituent_mass_module
+      use utils, only: open_file
       
       implicit none
       
@@ -18,7 +19,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !           |
       integer :: max                  !           |
       integer :: k = 0                !           |
@@ -36,12 +36,8 @@
       
       call allocate_parms
 
-      inquire (file=in_hru%hru_data, exist=i_exist)
-      if (.not. i_exist .or. in_hru%hru_data == "null") then
-        allocate (hru_db(0:0))
-      else 
+      if (open_file(113, in_hru%hru_data, required=.true.)) then
       do
-        open (113,file=in_hru%hru_data)
         read (113,*,iostat=eof) titldum
         if (eof < 0) exit
         read (113,*,iostat=eof) header
@@ -178,7 +174,9 @@
       end do
       exit
       enddo
-      endif
+      else
+        allocate (hru_db(0:0))
+      end if
       
       close (113)
      

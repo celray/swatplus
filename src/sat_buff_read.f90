@@ -4,7 +4,8 @@
       use maximum_data_module
       use hru_module
       use conditional_module
-      
+      use utils, only: open_file
+
       implicit none
 
       
@@ -27,11 +28,9 @@
       imax = 0
       
       !! read snow database data from snow.sno
-      inquire (file="satbuffer.str", exist=i_exist)
-      if(i_exist) then
-          
-      do 
-        open (107,file="satbuffer.str")
+      if (open_file(107, in_str%satbuffer_str)) then
+
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

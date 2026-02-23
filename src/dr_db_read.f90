@@ -4,6 +4,7 @@
       use input_file_module
       use constituent_mass_module
       use maximum_data_module
+      use utils, only: open_file
 
       implicit none
       
@@ -13,16 +14,13 @@
       character (len=80) :: header = ""
       integer :: eof = 0
       integer :: imax = 0
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: ii = 0
 
       eof = 0
       
       !read all delivery ratio data
-      inquire (file=in_delr%del_ratio, exist=i_exist)
-      if (i_exist .or. in_delr%del_ratio /= "null") then
+      if (open_file(107, in_delr%del_ratio, required=.true.)) then
         do
-          open (107,file=in_delr%del_ratio)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header

@@ -8,6 +8,7 @@
       use aqu_pesticide_module
       use hydrograph_module
       use constituent_mass_module
+      use utils, only: open_file
       
       implicit none      
       
@@ -15,7 +16,6 @@
       character (len=80) :: header = "" !             |header of file
       integer :: eof = 0                !             |end of file
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: iaqu = 0               !none         |counter
       integer :: iaq = 0
       integer :: ics = 0
@@ -24,12 +24,8 @@
       imax = 0
       
       !read init
-      inquire (file=in_aqu%init, exist=i_exist)
-      if (.not. i_exist .or. in_aqu%init == "null") then
-        allocate (aqu_init(0:0))
-      else   
+      if (open_file(105, in_aqu%init)) then
       do
-       open (105,file=in_aqu%init)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -57,6 +53,8 @@
        end do
        close (105)
 
+      else
+        allocate (aqu_init(0:0))
       end if
 
       !! initialize organics and constituents for each aquifer object

@@ -21,7 +21,8 @@
       use maximum_data_module
       use calibration_data_module
       use conditional_module
-      
+      use utils, only: open_file
+
       implicit none
 
       character (len=80) :: titldum = ""                 !           |title of file
@@ -35,12 +36,8 @@
       num_dtls = 0
         
       !!read decision tables used for land use scenarios - xwalk with scen_lu.dtl
-      inquire (file="scen_dtl.upd", exist=i_exist)
-      if (.not. i_exist .or. "scen_dtl.upd" == "null") then
-        allocate (upd_cond(0:0))
-      else
+      if (open_file(107, in_upd%scen_dtl)) then
       do
-        open (107,file="scen_dtl.upd")
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) num_dtls
@@ -67,7 +64,9 @@
       end do
       exit
       end do
-      end if      
+      else
+        allocate (upd_cond(0:0))
+      end if
 
       return
       end subroutine cal_cond_read

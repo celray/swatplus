@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use tillage_data_module
+      use utils, only: open_file
       
       implicit none      
 
@@ -10,7 +11,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: itl = 0              !none       |counter
       integer :: mtl = 0              !           |
       
@@ -19,12 +19,8 @@
       mtl = 0
       bmix_idtill = 0
       
-      inquire (file=in_parmdb%till_til, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%till_til == "null") then
-          allocate (tilldb(0:0))
-      else
+      if (open_file(105, in_parmdb%till_til)) then
         do
-          open (105,file=in_parmdb%till_til)
           read (105,*,iostat=eof) titldum
           if (eof < 0) exit
           read (105,*,iostat=eof) header
@@ -56,8 +52,10 @@
         enddo
         if (bmix_idtill == 0) then
           bmix_eff = 0.2
-          bmix_depth = 50. 
+          bmix_depth = 50.
         endif
+      else
+          allocate (tilldb(0:0))
       endif
       
       db_mx%tillparm = imax

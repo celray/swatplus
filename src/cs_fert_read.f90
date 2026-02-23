@@ -7,7 +7,8 @@
       use input_file_module
       use maximum_data_module
       use cs_module
-      
+      use utils, only: open_file
+
       implicit none
  
       character (len=80) :: titldum = ""
@@ -15,14 +16,11 @@
       !character (len=30) :: fert_name = ""
       integer :: icsi = 0
       integer :: eof = 0
-      logical :: i_exist              !none       |check to determine if file exists
 
       eof = 0
       
       !read constituent fertilizer loading (kg/ha)
-      inquire (file="fertilizer.frt_cs", exist=i_exist)
-      if (i_exist) then
-        open (107,file="fertilizer.frt_cs")
+      if (open_file(107, in_constit%fert_cs)) then
         read (107,*,iostat=eof) titldum
         read (107,*,iostat=eof) header
         

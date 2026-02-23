@@ -3,7 +3,8 @@
       use constituent_mass_module
       use input_file_module
       use maximum_data_module
- 
+      use utils, only: open_file
+
       implicit none 
         
       character (len=80) :: titldum = ""
@@ -12,15 +13,12 @@
       integer :: imax = 0
       integer :: ipest = 0
       integer :: ipesti = 0
-      logical :: i_exist              !none       |check to determine if file exists
 
       eof = 0
       
       !read all export coefficient data
-      inquire (file=in_init%pest_soil, exist=i_exist)
-      if (i_exist .or. in_init%pest_soil /= "null") then
+      if (open_file(107, in_init%pest_soil)) then
         do
-          open (107,file=in_init%pest_soil)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           imax = 0

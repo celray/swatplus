@@ -5,6 +5,7 @@
       use calibration_data_module
       use hydrograph_module
       use output_landscape_module
+      use utils, only: open_file
       
       implicit none
       
@@ -15,7 +16,6 @@
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
       integer :: nspu = 0             !           |
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: mcal = 0             !           |
       integer :: mlsu = 0             !none       |counter
       integer :: i = 0                !none       |counter
@@ -28,10 +28,8 @@
       mcal = 0
             
     !! read landscape cataloging unit definitions for output (old subbasin output file)
-    inquire (file=in_regs%def_lsu, exist=i_exist)
-    if (i_exist .or. in_regs%def_lsu /= "null") then
+    if (open_file(107, in_regs%def_lsu)) then
       do
-        open (107,file=in_regs%def_lsu)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mlsu
@@ -95,10 +93,8 @@
     end if    
 
       !!read data for each element in all landscape cataloging units
-      inquire (file=in_regs%ele_lsu, exist=i_exist)
-      if (i_exist .or. in_regs%ele_lsu /= "null") then
+      if (open_file(107, in_regs%ele_lsu)) then
       do
-        open (107,file=in_regs%ele_lsu)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

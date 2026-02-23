@@ -7,32 +7,27 @@
       use hru_module, only : sdr
       use landuse_data_module
       use mgt_operations_module
-      
+      use utils, only: open_file
+
       implicit none
 
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: mlu = 0              !           |
-      integer :: ilu = 0              !           |landuse type 
+      integer :: ilu = 0              !           |landuse type
       integer :: ipcom = 0            !none       |counter
       integer :: isched = 0           !           |
       integer :: ipr = 0              !none       |counter
-       
+
       mlu = 0
       eof = 0
       imax = 0
-      
+
       !! read all landuse data from landuse.dat
-      inquire (file=in_lum%landuse_lum, exist=i_exist)
-      if (.not. i_exist .or. in_lum%landuse_lum == "null") then
-        allocate (lum(0:0))
-        allocate (lum_str(0:0))
-      else
+      if (open_file(107, in_lum%landuse_lum)) then
       do
-       open (107,file=in_lum%landuse_lum)
        read (107,*,iostat=eof) titldum
        if (eof < 0) exit
        read (107,*,iostat=eof) header
@@ -170,6 +165,9 @@
        end do
        exit
       end do
+      else
+        allocate (lum(0:0))
+        allocate (lum_str(0:0))
       endif
       
       close(107)

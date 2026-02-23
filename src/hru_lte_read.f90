@@ -10,7 +10,8 @@
       use time_module
       use soil_data_module
       use conditional_module
-      
+      use utils, only: open_file
+
       implicit none
       
       external :: ascrv
@@ -19,7 +20,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: grow_start = 0       !           |
       integer :: grow_end = 0         !           |
       integer :: ipl = 0              !none       |counter
@@ -66,12 +66,8 @@
       a1 = .2 
       a2 = .8 
       
-      inquire (file=in_hru%hru_ez, exist=i_exist)
-      if (.not. i_exist .or. in_hru%hru_ez == "null") then
-        allocate (hlt_db(0:0))
-      else
+      if (open_file(1, in_hru%hru_ez)) then
       do
-        open (1,file=in_hru%hru_ez)
         read (1,*,iostat=eof) titldum
         if (eof < 0) exit
         read (1,*,iostat=eof) header
@@ -274,8 +270,10 @@
 
       exit
       end do
+      else
+        allocate (hlt_db(0:0))
       endif
-      
+
       close (1)
         
       return

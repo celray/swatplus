@@ -4,25 +4,21 @@
       use input_file_module
       use maximum_data_module
       use reservoir_data_module
-      
-      implicit none     
-         
+      use utils, only: open_file
+
+      implicit none
+
       character (len=80) :: titldum = ""  !             |title of file
       character (len=80) :: header = "" !             |header of file
       integer :: eof = 0                !             |end of file
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: ires = 0               !none         |counter
-      
+
       eof = 0
       imax = 0
 
-      inquire (file=in_res%hyd_res, exist=i_exist)
-      if (.not. i_exist .or. in_res%hyd_res == "null") then
-        allocate (res_hyddb(0:0))
-      else   
+      if (open_file(105, in_res%hyd_res)) then
       do
-       open (105,file=in_res%hyd_res)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -63,6 +59,8 @@
        close (105)
       exit
       enddo
+      else
+        allocate (res_hyddb(0:0))
       endif
   
       return

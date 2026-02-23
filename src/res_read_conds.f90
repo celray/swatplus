@@ -2,9 +2,11 @@
     
       use reservoir_conditions_module
       use maximum_data_module
+      use input_file_module, only: in_res
+      use utils, only: open_file
 
       implicit none
-      
+
       character (len=80) :: title = ""
       integer :: max_table = 0
       integer :: tnum_conds = 0
@@ -14,11 +16,8 @@
       integer :: icc = 0
       integer :: imod = 0
       integer :: eof = 0
-      logical :: i_exist         !                |check to determine if file exists
-   
-      inquire (file="res_conds.dat", exist=i_exist)
-      if (.not. i_exist) return
-      open (100,file="res_conds.dat")
+
+      if (.not. open_file(100, in_res%res_conds)) return
       read (100,*,iostat=eof) title
       if (eof < 0) return
       read (100,*,iostat=eof) max_table

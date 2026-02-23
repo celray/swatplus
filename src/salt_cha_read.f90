@@ -7,7 +7,8 @@
       use hydrograph_module
       use sd_channel_module
       use organic_mineral_mass_module
- 
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: titldum = ""
@@ -21,10 +22,8 @@
       eof = 0
       
       !read all export coefficient data
-      inquire (file="salt_channel.ini", exist=i_exist)
-      if (i_exist .or. "salt_channel.ini" /= "null") then
+      if (open_file(107, in_salt%channel_slt)) then
         do
-          open (107,file="salt_channel.ini")
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header

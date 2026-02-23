@@ -7,6 +7,7 @@
       
       use gwflow_module
       use hydrograph_module
+      use input_file_module, only: in_gwf
       
       implicit none
 
@@ -28,8 +29,8 @@
       !integers for input and output files
       !in_chan = 1280
       !in_con = 1281
-      open(1280,file='gwflow.chancells')
-      open(1281,file='gwflow.con')
+      open(1280,file=in_gwf%chancells)
+      open(1281,file=in_gwf%con)
       
       !number of cells that intersect with channels
       num_chancells = sp_ob%gwflow

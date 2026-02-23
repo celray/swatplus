@@ -4,7 +4,8 @@
       use constituent_mass_module
       use input_file_module
       use maximum_data_module
-      
+      use utils, only: open_file
+
       implicit none
  
       character (len=80) :: titldum = ""
@@ -17,10 +18,8 @@
       eof = 0
       
       !read cs data for soils and plants
-      inquire (file="cs_hru.ini", exist=i_exist)
-      if (i_exist .or. "cs_hru.ini" /= "null") then
+      if (open_file(107, in_constit%hru_cs)) then
         do
-          open (107,file="cs_hru.ini")
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header

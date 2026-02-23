@@ -4,6 +4,7 @@
       use time_module
       use maximum_data_module
       use climate_module
+      use utils, only: open_file
       
       implicit none
       
@@ -14,34 +15,14 @@
       integer :: iwgn = 0             !           | 
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists  
       integer :: mo = 0               !none       !counter
  
       eof = 0
       imax = 0
 
       !! read weather generator data from weather_generator.dat - wgn parameters
-      inquire (file=in_cli%weat_wgn, exist=i_exist)
-      if (.not. i_exist .or. in_cli%weat_wgn == "null") then              
-        allocate (wgn(0:1))
-        allocate (wgn_n(1))
-        allocate (wgn_orig(0:1))
-        allocate (wgncur(3,0:1), source = 0.)
-        allocate (wgnold(3,0:1), source = 0.)
-        wgncur = 0.
-        wgnold = 0.
-        allocate (wgn_pms(0:1))
-        allocate (frad(0:1,1), source = 0.)
-        allocate (rnd2(0:1), source = 0.)
-        allocate (rnd3(0:1), source = 0.)
-        allocate (rnd8(0:1), source = 0.)
-        allocate (rnd9(0:1), source = 0.)
-        allocate (rndseed(10,0:1), source = 0)
-        allocate (idg(9), source = 0)
-        call gcycl
-      else 
+      if (open_file(114, in_cli%weat_wgn)) then
       do
-        open (114,file=in_cli%weat_wgn)
         read (114,*,iostat=eof) titldum
         if (eof < 0) exit
         !! determine max number for array (imax) and total number in file
@@ -105,8 +86,25 @@
       end do    
       exit
       enddo
+      else
+        allocate (wgn(0:1))
+        allocate (wgn_n(1))
+        allocate (wgn_orig(0:1))
+        allocate (wgncur(3,0:1), source = 0.)
+        allocate (wgnold(3,0:1), source = 0.)
+        wgncur = 0.
+        wgnold = 0.
+        allocate (wgn_pms(0:1))
+        allocate (frad(0:1,1), source = 0.)
+        allocate (rnd2(0:1), source = 0.)
+        allocate (rnd3(0:1), source = 0.)
+        allocate (rnd8(0:1), source = 0.)
+        allocate (rnd9(0:1), source = 0.)
+        allocate (rndseed(10,0:1), source = 0)
+        allocate (idg(9), source = 0)
+        call gcycl
       endif
-      close (114) 
+      close (114)
 
       !! read wind direction generator data from wind_direction.dat
       !!!removed 1_22_2024

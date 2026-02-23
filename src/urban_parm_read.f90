@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use urban_data_module
+      use utils, only: open_file
       
       implicit none
       
@@ -10,15 +11,10 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0.            !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: iu = 0               !none       |counter 
+      integer :: iu = 0               !none       |counter
            
-      inquire (file=in_parmdb%urban_urb, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%urban_urb == "null") then
-          allocate (urbdb(0:0))
-      else
+      if (open_file(108, in_parmdb%urban_urb)) then
       do
-        open (108,file=in_parmdb%urban_urb)
         read (108,*,iostat=eof) titldum
         if (eof < 0) exit
         read (108,*,iostat=eof) header
@@ -44,6 +40,8 @@
          end do
        exit
       enddo
+      else
+          allocate (urbdb(0:0))
       endif
 
       db_mx%urban = imax

@@ -1,27 +1,25 @@
       subroutine soil_plant_init
-    
+
       use hru_module
       use basin_module
       use input_file_module
       use maximum_data_module
       use constituent_mass_module
+      use utils, only: open_file
 
       implicit none
- 
+
       character (len=80) :: titldum = ""
       character (len=80) :: header = ""
       integer :: eof = 0
       integer :: imax = 0
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: ii = 0
 
       eof = 0
-      
+
       !read all export coefficient data
-      inquire (file=in_init%soil_plant_ini, exist=i_exist)
-      if (i_exist .or. in_init%soil_plant_ini /= "null") then
+      if (open_file(107, in_init%soil_plant_ini)) then
         do
-          open (107,file=in_init%soil_plant_ini)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -32,16 +30,16 @@
             if (eof < 0) exit
             imax = imax + 1
           end do
-          
+
           db_mx%sol_plt_ini = imax
-          
+
           allocate (sol_plt_ini(imax))
           rewind (107)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
           if (eof < 0) exit
-          
+
           do ii = 1, imax
             if (bsn_cc%nam1 == 0) then
               read (107,*,iostat=eof) sol_plt_ini(ii)%name, sol_plt_ini(ii)%sw_frac, sol_plt_ini(ii)%nutc,  &
@@ -57,6 +55,6 @@
           exit
         end do
       end if
-      
+
       return
       end subroutine soil_plant_init

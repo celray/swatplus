@@ -4,6 +4,7 @@
         use maximum_data_module
         use hru_lte_module
         use soil_data_module
+        use utils, only: open_file
         
         implicit none
         
@@ -11,19 +12,13 @@
         character (len=80) :: header = "" !           |header of file
         integer :: eof = 0              !           |end of file
         integer :: k = 0                !           |texture counter
-        logical :: i_exist         !                |check to determine if file exists
-        
     
         eof = 0
         
         !allocate (soil_lte(12))
 
-       inquire (file=in_sol%lte_sol, exist=i_exist)
-         if (.not. i_exist .or. in_sol%lte_sol == "null") then
-            allocate (soil_lte(0:0))
-          else
+       if (open_file(107, in_sol%lte_sol)) then
        do
-          open (107,file=in_sol%lte_sol)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -36,8 +31,10 @@
             if (eof < 0) exit
           end do
         end do
-     
+
         close (107)
-      end if 
+      else
+            allocate (soil_lte(0:0))
+      end if
       return
       end subroutine soil_lte_db_read

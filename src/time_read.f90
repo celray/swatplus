@@ -2,6 +2,7 @@
       
        use time_module
        use input_file_module
+       use utils, only: open_file
        
        implicit none
       
@@ -12,15 +13,12 @@
        integer :: eof = 0               !           |end of file
        integer :: mo = 0                !           |
        integer :: day_mo = 0            !           |
-       logical :: i_exist              !none       |check to determine if file exists
        
        eof = 0
 
-       !! read weather codes
-       inquire (file=in_sim%time, exist=i_exist)
-       if (i_exist .or. in_sim%time /= "null") then   
+       !! read time control
+       if (open_file(107, in_sim%time, required=.true.)) then
        do
-         open (107,file=in_sim%time)
          read (107,*,iostat=eof) titldum
          if (eof < 0) exit
          read (107,*,iostat=eof) header

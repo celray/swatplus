@@ -3,25 +3,21 @@
       use input_file_module
       use maximum_data_module
       use landuse_data_module
-      
-      implicit none 
-      
+      use utils, only: open_file
+
+      implicit none
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: il = 0               !none       |counter
-      
+
       eof = 0
       imax = 0
-      
-      inquire (file=in_lum%ovn_lum, exist=i_exist)
-      if (.not. i_exist .or. in_lum%ovn_lum == "null") then
-          allocate (overland_n(0:0))
-      else
+
+      if (open_file(108, in_lum%ovn_lum)) then
       do
-        open (108,file=in_lum%ovn_lum)
         read (108,*,iostat=eof) titldum
         if (eof < 0) exit
         read (108,*,iostat=eof) header
@@ -46,6 +42,8 @@
          end do
        exit
       enddo
+      else
+          allocate (overland_n(0:0))
       endif
 
       db_mx%ovn = imax

@@ -1,41 +1,37 @@
       subroutine pl_read_regions_cal
-   
+
       use input_file_module
       use maximum_data_module
       use calibration_data_module
       use hydrograph_module
       use hru_module, only : hru
-      
-      implicit none 
-      
+      use utils, only: open_file
+
+      implicit none
+
       external :: define_unit_elements
 
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      integer :: nspu = 0             !           | 
+      integer :: nspu = 0             !           |
       integer :: mcal = 0             !           |
       integer :: mreg = 0             !           |
-      integer :: i = 0                !none       |counter 
-      integer :: isp = 0              !none       |counter 
-      integer :: ielem1 = 0           !none       |counter  
-      integer :: ihru = 0             !none       |counter 
-      integer :: iihru = 0            !none       |counter 
-      integer :: ilum_mx = 0          !           | 
-      integer :: ilum = 0             !none       |counter  
-      
+      integer :: i = 0                !none       |counter
+      integer :: isp = 0              !none       |counter
+      integer :: ielem1 = 0           !none       |counter
+      integer :: ihru = 0             !none       |counter
+      integer :: iihru = 0            !none       |counter
+      integer :: ilum_mx = 0          !           |
+      integer :: ilum = 0             !none       |counter
+
       imax = 0
       mcal = 0
       mreg = 0
- 
-    inquire (file=in_chg%plant_gro_sft, exist=i_exist)
-    if (.not. i_exist .or. in_chg%plant_gro_sft == "null" ) then
-      allocate (plcal(0:0))
-    else
+
+    if (open_file(107, in_chg%plant_gro_sft)) then
       do
-        open (107,file=in_chg%plant_gro_sft)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -46,7 +42,7 @@
 
       do i = 1, mreg
 
-        read (107,*,iostat=eof) plcal(i)%name, plcal(i)%lum_num, nspu       
+        read (107,*,iostat=eof) plcal(i)%name, plcal(i)%lum_num, nspu
         if (eof < 0) exit
         if (nspu > 0) then
           allocate (elem_cnt(nspu), source = 0)
@@ -55,7 +51,7 @@
           if (eof < 0) exit
 
           call define_unit_elements (nspu, ielem1)
-          
+
           allocate (plcal(i)%num(ielem1), source = 0)
           plcal(i)%num = defunit_num
           plcal(i)%num_tot = ielem1
@@ -71,9 +67,9 @@
           do ihru = 1, sp_ob%hru
             plcal(i)%num(ihru) = ihru
             hru(ihru)%crop_reg = i
-          end do      
+          end do
         end if
-        
+
         !! read landscape soft calibration data for each land use
         !read (107,*,iostat=eof) header
         !if (eof < 0) exit
@@ -86,16 +82,18 @@
             read (107,*,iostat=eof) plcal(i)%lum(ilum)%meas
             if (eof < 0) exit
           end do
-        end if 
+        end if
 
       end do    !mreg
       exit
-         
-      end do 
-      end if      
-        
-      db_mx%plcal_reg = mreg
-      
+
+      end do
       close(107)
+      else
+        allocate (plcal(0:0))
+      end if
+
+      db_mx%plcal_reg = mreg
+
       return
       end subroutine pl_read_regions_cal

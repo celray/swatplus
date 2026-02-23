@@ -9,8 +9,8 @@
       use constituent_mass_module
       use hydrograph_module
       use cs_module
-      use maximum_data_module
-      
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: header = ""  !           |header of file
@@ -26,14 +26,10 @@
       if(cs_db%num_cs > 0) then
       
       cs_uptake_on = 0
-      inquire (file='cs_uptake',exist=i_exist)
-      if(i_exist) then
-        
+      if (open_file(5054, in_constit%uptake_cs)) then
+
         !turn on constituent uptake feature
         cs_uptake_on = 1
-        
-        !open and read first lines
-        open(5054,file='cs_uptake')
         read(5054,*) header
         read(5054,*) header
         read(5054,*) header

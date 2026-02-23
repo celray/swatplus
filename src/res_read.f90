@@ -12,6 +12,7 @@
       use res_salt_module
       use res_cs_module
       use reservoir_conditions_module
+      use utils, only: open_file
       
       implicit none
 
@@ -25,7 +26,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: ires = 0             !none       |counter 
       integer :: k = 0                !           |
       integer :: ihyd = 0             !none       |counter
@@ -40,13 +40,8 @@
             
       !read reservoir.res
       imax = 0
-      inquire (file=in_res%res, exist=i_exist)
-      if (.not. i_exist .or. in_res%res == "null") then
-        allocate (res_dat_c(0:0))
-        allocate (res_dat(0:0))
-      else   
+      if (open_file(105, in_res%res, required=.true.)) then
       do
-       open (105,file=in_res%res)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -166,7 +161,10 @@
       close (105)
       exit
       enddo
-      endif
+      else
+        allocate (res_dat_c(0:0))
+        allocate (res_dat(0:0))
+      end if
       
       return
       end subroutine res_read

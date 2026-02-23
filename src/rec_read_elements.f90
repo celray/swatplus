@@ -4,6 +4,7 @@
       use maximum_data_module
       use calibration_data_module
       use hydrograph_module
+      use utils, only: open_file
       implicit none
       
       external :: define_unit_elements
@@ -11,7 +12,6 @@
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: imax = 0             !none       |end of loop
       integer :: isp = 0              !none       |counter
       integer :: mcal = 0             !           |           
@@ -27,10 +27,8 @@
       mcal = 0
       mreg = 0
             
-    inquire (file=in_regs%def_psc, exist=i_exist)
-    if (i_exist .or. in_regs%def_psc /= "null") then
+    if (open_file(107, in_regs%def_psc)) then
       do
-        open (107,file=in_regs%def_psc)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -77,10 +75,8 @@
       end if      
         
     !! setting up regions for recall soft cal and/or output by type
-    inquire (file=in_regs%def_psc_reg, exist=i_exist)
-    if (i_exist .or. in_regs%def_psc_reg /= "null") then
+    if (open_file(107, in_regs%def_psc_reg)) then
       do
-        open (107,file=in_regs%def_psc_reg)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -130,10 +126,8 @@
       end if    ! mreg > 0
       
       !!read data for each element in all landscape cataloging units
-      inquire (file=in_regs%ele_psc, exist=i_exist)
-      if (i_exist .or. in_regs%ele_psc /= "null") then
+      if (open_file(107, in_regs%ele_psc)) then
       do
-        open (107,file=in_regs%ele_psc)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

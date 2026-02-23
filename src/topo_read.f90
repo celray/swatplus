@@ -3,32 +3,27 @@
       use input_file_module
       use maximum_data_module
       use topography_data_module
-      
+      use utils, only: open_file
+
       implicit none
-    
-      
-      
-      
+
+
+
       external :: search
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: mtopo = 0            !           |
       integer :: ith = 0              !none       |counter
-      
+
       mtopo = 0
       eof = 0
       imax = 0
-      
+
       !! read all data from topo.dat
-      inquire (file=in_hyd%topogr_hyd, exist=i_exist)
-      if (.not. i_exist .or. in_hyd%topogr_hyd == "null") then
-        allocate (topo_db(0:0))
-      else
+      if (open_file(107, in_hyd%topogr_hyd)) then
         do
-          open (107,file=in_hyd%topogr_hyd)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -53,6 +48,8 @@
           end do
           exit
         enddo
+      else
+        allocate (topo_db(0:0))
       endif
       close (107)
       

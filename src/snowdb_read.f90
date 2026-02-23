@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use hru_module
+      use utils, only: open_file
       
       implicit none
 
@@ -10,7 +11,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: msno = 0             !           |
       integer :: isno = 0             !none       |counter
       
@@ -20,12 +20,8 @@
       
       
       !! read snow database data from snow.sno
-      inquire (file=in_parmdb%snow, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%snow == "null") then
-        allocate (snodb(0:0))
-      else 
-      do 
-        open (107,file=in_parmdb%snow)
+      if (open_file(107, in_parmdb%snow)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -51,7 +47,8 @@
 
       exit
       enddo
-      
+      else
+        allocate (snodb(0:0))
       endif
       close (107)
       

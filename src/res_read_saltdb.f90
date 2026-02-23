@@ -5,30 +5,26 @@
       use reservoir_data_module
       use res_salt_module
       use constituent_mass_module
+      use utils, only: open_file
 
 !!    ~ ~ ~ PURPOSE ~ ~ ~
 !!    this subroutine reads reservoir water quality parameters for salt ions
-      
+
       implicit none
-      
+
       character (len=80) :: titldum = ""  !             |title of file
       character (len=80) :: header = "" !             |header of file
       integer :: i = 0                  !             |counter
       integer :: eof = 0                !             |end of file
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: ires = 0               !none         |counter
       integer :: isalti = 0             !none         |counter
-      
+
       eof = 0
       imax = 0
 
-      inquire (file="salt_res",exist=i_exist)
-      if (.not. i_exist .or. in_res%nut_res == "null") then
-        allocate (res_salt_data(0:0))
-      else
+      if (open_file(105, in_salt%res_slt)) then
       do
-        open (105,file="salt_res")
         read (105,*,iostat=eof) titldum
         read (105,*,iostat=eof) titldum
         do i=1,8
@@ -69,6 +65,8 @@
         end do
         exit
       enddo
+      else
+        allocate (res_salt_data(0:0))
       endif
       close(105)
       

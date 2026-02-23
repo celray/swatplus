@@ -4,22 +4,18 @@
       use input_file_module
       use maximum_data_module
       use cs_data_module
-      
+      use utils, only: open_file
+
       implicit none
  
       character (len=80) :: titldum = ""
       character (len=80) :: header = ""
       character (len=12) :: plant_name = ""
       integer :: iplant = 0
-      logical :: i_exist              !none       |check to determine if file exists
 
 
       !read plant boron tolerance data
-      inquire (file="cs_plants_boron", exist=i_exist)
-      if (i_exist) then
-        
-        !open the file and read first line
-        open(107,file="cs_plants_boron")
+      if (open_file(107, in_constit%plants_boron_cs)) then
         read(107,*) titldum
 
         !read plant boron tolerance parameters (a,b parameters from relative yield equations)

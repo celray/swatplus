@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use septic_data_module
+      use utils, only: open_file
       
       implicit none
          
@@ -10,18 +11,13 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: is = 0               !none       |counter
       
       eof = 0
       imax = 0
 
-      inquire (file=in_parmdb%septic_sep, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%septic_sep == "null") then
-          allocate (sepdb(0:0))
-      else
+      if (open_file(171, in_parmdb%septic_sep)) then
       do
-        open (171,file=in_parmdb%septic_sep)
         read (171,*,iostat=eof) titldum
         if (eof < 0) exit
         read (171,*,iostat=eof) header
@@ -52,6 +48,8 @@
         close (171)
         exit
       enddo
+      else
+          allocate (sepdb(0:0))
       endif
       
       return

@@ -5,7 +5,8 @@
       use calibration_data_module
       use hydrograph_module
       use sd_channel_module
-      
+      use utils, only: open_file
+
       implicit none
       
       external :: define_unit_elements
@@ -15,8 +16,7 @@
       integer :: eof = 0               !          |end of file
       integer :: imax = 0              !          |determine max number for array (imax) and total number in file
       integer :: mcal = 0              !units     |description
-      logical :: i_exist               !          |check to determine if file exists
-      integer :: mreg = 0              !units     |description 
+      integer :: mreg = 0              !units     |description
       integer :: i = 0                 !none      |counter
       integer :: k = 0                 !units     |description
       integer :: nspu = 0              !units     |description
@@ -30,10 +30,8 @@
       mcal = 0
       mreg = 0
             
-    inquire (file=in_regs%def_cha, exist=i_exist)
-    if (i_exist .or. in_regs%def_cha /= "null") then
+    if (open_file(107, in_regs%def_cha)) then
       do
-        open (107,file=in_regs%def_cha)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -79,10 +77,8 @@
       end if      
         
     !! setting up regions for channel soft cal and/or output by order
-    inquire (file=in_regs%def_cha_reg, exist=i_exist)
-    if (i_exist .or. in_regs%def_cha_reg /= "null") then
+    if (open_file(107, in_regs%def_cha_reg)) then
       do
-        open (107,file=in_regs%def_cha_reg)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -139,10 +135,8 @@
       end if    ! mreg > 0
       
       !!read data for each element in all landscape cataloging units
-      inquire (file="element.ccu", exist=i_exist)
-      if (i_exist ) then
+      if (open_file(107, in_cha%element_ccu)) then
       do
-        open (107,file="element.ccu")
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

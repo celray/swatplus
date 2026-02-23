@@ -6,14 +6,14 @@
       use maximum_data_module
       use hydrograph_module
       use time_module
-      
+      use utils, only: open_file
+
       implicit none      
       
       character (len=80) :: titldum = ""!             |title of file
       character (len=80) :: header = "" !             |header of file
       integer :: eof = 0              !             |end of file
       integer :: imax = 0             !none         |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none         |check to determine if file exists
       integer :: idb = 0              !             |
       integer :: ts_sed = 0           !none         |time step for channel sediment routing
       
@@ -27,12 +27,8 @@
       allocate (trav_time(ts_sed), source = 0.)
       allocate (flo_dep(ts_sed), source = 0.)
       
-      inquire (file=in_cha%hyd_sed, exist=i_exist)
-      if (.not. i_exist .or. in_cha%hyd_sed == "null") then
-        allocate (sd_chd(0:0))
-      else
+      if (open_file(1, in_cha%hyd_sed)) then
       do
-        open (1,file=in_cha%hyd_sed)
         read (1,*,iostat=eof) titldum
         if (eof < 0) exit
         read (1,*,iostat=eof) header
@@ -64,14 +60,12 @@
 
         exit
       end do
+      else
+        allocate (sd_chd(0:0))
       end if
 
-      inquire (file="sed_nut.cha", exist=i_exist)
-      if (.not. i_exist .or. "sed_nut.cha" == "null") then
-        allocate (sd_chd1(1))
-      else
+      if (open_file(1, in_cha%sed_nut)) then
       do
-        open (1,file="sed_nut.cha")
         read (1,*,iostat=eof) titldum
         if (eof < 0) exit
         read (1,*,iostat=eof) header
@@ -99,6 +93,8 @@
 
         exit
       end do
+      else
+        allocate (sd_chd1(1))
       end if
 
       close (1)

@@ -4,7 +4,7 @@
       use input_file_module
       use maximum_data_module
       use pesticide_data_module
-      use utils
+      use utils, only: open_file, exp_w
       
       implicit none
 
@@ -12,19 +12,13 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: ip = 0               !none       |counter 
+      integer :: ip = 0               !none       |counter
       
       eof = 0
       imax = 0
       
-      inquire (file=in_parmdb%pest, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%pest == "null") then
-        allocate (pestdb(0:0))
-        allocate (pestcp(0:0))
-      else
+      if (open_file(106, in_parmdb%pest)) then
       do
-        open (106,file=in_parmdb%pest)
         read (106,*,iostat=eof) titldum
         if (eof < 0) exit
         read (106,*,iostat=eof) header
@@ -80,6 +74,9 @@
         end do
         exit
       enddo
+      else
+        allocate (pestdb(0:0))
+        allocate (pestcp(0:0))
       endif
       
       db_mx%pestparm = imax

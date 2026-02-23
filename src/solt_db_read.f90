@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use soil_data_module
+      use utils, only: open_file
       
       implicit none
       
@@ -11,7 +12,6 @@
       integer :: eof = 0              !           |end of file
       integer :: msolt_db = 0         !           |
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: isolt = 0            !           |
       
       msolt_db = 0
@@ -19,12 +19,8 @@
       imax = 0
       
       !! read all soil test operations data from soiltest.dat
-      inquire (file=in_sol%nut_sol,exist=i_exist)
-      if (.not. i_exist .or. in_sol%nut_sol == "null") then
-        allocate (solt_db(0:0))
-      else
+      if (open_file(107, in_sol%nut_sol)) then
         do
-          open (107,file=in_sol%nut_sol)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -50,6 +46,8 @@
           end do 
           exit
         enddo
+      else
+        allocate (solt_db(0:0))
       endif
       
       db_mx%soiltest = imax

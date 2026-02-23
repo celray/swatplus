@@ -1,10 +1,11 @@
     subroutine cli_staread 
 
     use input_file_module
-    use maximum_data_module 
+    use maximum_data_module
     use climate_module
     use time_module
     use hydrograph_module
+    use utils, only: open_file
 
     implicit none
           
@@ -17,21 +18,14 @@
     integer :: eof = 0              !           |end of file
     integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
     integer :: iwgn = 0             !           |
-    logical :: i_exist              !none       |check to determine if file exists
     !integer :: iwst                 !none       |counter
     integer :: i = 0                !none       |counter
     
     eof = 0
     imax = 0
 
-    inquire (file=in_cli%weat_sta, exist=i_exist)
-    if (.not. i_exist .or. in_cli%weat_sta == "null") then
-        allocate (wst(0:1))
-        allocate (wst_n(0:0))
-    else
+    if (open_file(107, in_cli%weat_sta)) then
         do
-            !! read weather stations data from weather.wst - gages and meas/gen
-            open (107,file=in_cli%weat_sta)
             read (107,*,iostat=eof) titldum
             if (eof < 0) exit
             read (107,*,iostat=eof) header
@@ -98,6 +92,9 @@
             end do
             exit
         enddo
+    else
+        allocate (wst(0:1))
+        allocate (wst_n(0:0))
     endif
                       
     close (107) 

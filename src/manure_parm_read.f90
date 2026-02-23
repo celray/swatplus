@@ -3,7 +3,8 @@
       use input_file_module
       use maximum_data_module
       use fertilizer_data_module
-      
+      use utils, only: open_file
+
       implicit none
    
       integer :: it = 0               !none       |counter
@@ -19,12 +20,8 @@
       imax = 0
       mfrt = 0
       
-      inquire (file="manure.frt", exist=i_exist)
-      if (.not. i_exist .or. "manure.frt" == "null") then
-         allocate (manure_db(0:0))
-      else
-      do  
-        open (107,file="manure.frt")
+      if (open_file(107, in_manure%manure_frt)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -49,6 +46,8 @@
         end do
        exit
       enddo
+      else
+         allocate (manure_db(0:0))
       endif
       
       db_mx%manureparm  = imax 

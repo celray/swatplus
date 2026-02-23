@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use fertilizer_data_module
+      use utils, only: open_file
       
       implicit none
    
@@ -12,19 +13,14 @@
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
       integer :: mfrt = 0             !           |
-      logical :: i_exist              !none       |check to determine if file exists
-      
-      
+
+
       eof = 0
       imax = 0
       mfrt = 0
       
-      inquire (file=in_parmdb%fert_frt, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%fert_frt == "null") then
-         allocate (fertdb(0:0))
-      else
-      do  
-        open (107,file=in_parmdb%fert_frt)
+      if (open_file(107, in_parmdb%fert_frt)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -49,6 +45,8 @@
         end do
        exit
       enddo
+      else
+         allocate (fertdb(0:0))
       endif
       
       db_mx%fertparm  = imax 

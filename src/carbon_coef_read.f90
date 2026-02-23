@@ -4,10 +4,12 @@ subroutine carbon_coef_read
 
     use carbon_module
     use basin_module
-    use tillage_data_module 
+    use tillage_data_module
     use soil_module
     use organic_mineral_mass_module
-    
+    use input_file_module
+    use utils, only: open_file
+
     implicit none
 
     integer :: eof = 0                !           |end of file
@@ -20,9 +22,7 @@ subroutine carbon_coef_read
     soil_test_cntr  = 0     ! local variable
 
     if (bsn_cc%cswat == 2) then
-        inquire (file='carb_coefs.cbn', exist=i_exist)
-        if (i_exist) then
-          open (107,file='carb_coefs.cbn', iostat=eof)
+        if (open_file(107, in_carbon%coefficients_cbn)) then
           do
             read (107,*,iostat=eof) titldum
             if (eof < 0) exit

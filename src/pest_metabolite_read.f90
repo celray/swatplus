@@ -5,7 +5,8 @@
       use maximum_data_module
       use pesticide_data_module
       use constituent_mass_module
-      
+      use utils, only: open_file
+
       implicit none
 
       character (len=80) :: titldum = ""!           |title of file
@@ -23,10 +24,8 @@
       eof = 0
       imax = 0
       
-      inquire (file="pest_metabolite.pes", exist=i_exist)
-      if (i_exist ) then
+      if (open_file(106, in_parmdb%metabolite)) then
       do
-        open (106,file="pest_metabolite.pes")
         read (106,*,iostat=eof) titldum
         if (eof < 0) exit
         read (106,*,iostat=eof) header

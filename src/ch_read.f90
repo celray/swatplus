@@ -6,11 +6,11 @@
       use maximum_data_module
       use hydrograph_module
       use pesticide_data_module
+      use utils, only: open_file
 
       implicit none
-      
 
-      
+
 
       external :: hyddep_output, recall_cs, recall_salt
       character (len=80) :: titldum = ""  !              |title of file
@@ -18,24 +18,18 @@
       integer :: eof = 0                !              |end of file
       integer :: i = 0                  !units         |description
       integer :: imax = 0               !units         |description
-      logical :: i_exist                !              |check to determine if file exists
       integer :: ichi = 0               !none          |counter
       integer :: k = 0                  !units         |description
       integer :: iinit = 0              !none          |counter
       integer :: ihyd = 0               !none          |counter
       integer :: ised = 0               !none          |counter
       integer :: inut = 0               !none          |counter
-      
+
       eof = 0
       imax = 0
 
-      inquire (file=in_cha%dat, exist=i_exist)
-      if (.not. i_exist .or. in_cha%dat == "null") then
-        allocate (ch_dat(0:0))
-        allocate (ch_dat_c(0:0))
-      else   
+      if (open_file(105, in_cha%dat)) then
       do
-       open (105,file=in_cha%dat)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -104,6 +98,9 @@
        close (105)
       exit
       enddo
+      else
+        allocate (ch_dat(0:0))
+        allocate (ch_dat_c(0:0))
       endif
       
       return

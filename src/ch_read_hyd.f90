@@ -4,25 +4,21 @@
       use input_file_module
       use maximum_data_module
       use channel_data_module
-      
+      use utils, only: open_file
+
       implicit none
 
       character (len=80) :: titldum = "" !          |title of file
       character (len=80) :: header = ""  !          |header of file
       integer :: eof = 0               !          |end of file
-      logical :: i_exist               !          |check to determine if file exists
       integer :: imax = 0              !units     |description
       integer :: ich = 0               !none      |counter
 
       eof = 0
       imax = 0
-      
-      inquire (file=in_cha%hyd, exist=i_exist)
-      if (.not. i_exist .or. in_cha%hyd == "null") then
-        allocate (ch_hyd(0:0))
-      else   
+
+      if (open_file(105, in_cha%hyd)) then
       do
-       open (105,file=in_cha%hyd)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -61,6 +57,8 @@
        close (105)
       exit
       enddo
+      else
+        allocate (ch_hyd(0:0))
       endif
 
       return    

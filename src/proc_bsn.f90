@@ -6,7 +6,8 @@
       implicit none
       
       external :: basin_print_codes_read, basin_prm_default, basin_read_cc, basin_read_objs, &
-                  basin_read_prm, carbon_coef_read, co2_read, readcio_read, time_read
+                  basin_read_prm, carbon_coef_read, co2_read, gwflow_aqu_read,            &
+                  readcio_read, time_read
       
 !!!  open file to print all output files that are written
       call open_output_file(9000, "files_out.out")
@@ -18,15 +19,18 @@
      call open_output_file(9004, "area_calc.out", 80000)
 
                 
+      !! readcio_read MUST be called first — it populates all filename
+      !! variables from file.cio. No defaults; everything from file.cio.
+      call readcio_read
+
       call basin_read_cc
+      call gwflow_aqu_read
       call basin_read_objs
       call time_read
-      
+
       !if (time%step > 0) then
         time%dtm = 1440. / time%step
       !end if
-      
-      call readcio_read
              
       call basin_read_prm
       call basin_prm_default

@@ -6,7 +6,8 @@
       use maximum_data_module
       use hydrograph_module
       use constituent_mass_module
-      
+      use utils, only: open_file
+
       implicit none 
       
       character (len=80) :: titldum = ""!           |title of file
@@ -21,13 +22,8 @@
       
       !! read water allocation inputs
 
-      inquire (file='om_treat.wal', exist=i_exist)
-      if (.not. i_exist .or. 'om_treat.wal' == "null") then
-        allocate (wtp_om_treat(0:0))
-        allocate (om_treat_name(0:0))
-      else
-      do 
-        open (107,file='om_treat.wal')
+      if (open_file(107, in_wal%om_treat)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) imax
@@ -42,8 +38,11 @@
           read (107,*,iostat=eof) om_treat_name(iom_tr), wtp_om_treat(iom_tr)
         end do
       end do
+      else
+        allocate (wtp_om_treat(0:0))
+        allocate (om_treat_name(0:0))
       end if
-      
+
       close(107)
 
       return

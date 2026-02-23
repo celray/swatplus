@@ -5,6 +5,7 @@
        use time_module
        use climate_module
        use output_path_module
+       use utils, only: open_file
        
        implicit none
        
@@ -38,11 +39,8 @@
        eof = 0
       
     !! read CO2 yearly values     
-      inquire (file="co2_yr.dat", exist=i_exist)
-        if (.not. i_exist .or. "co2_yr.dat" == " null") then
-      else 
+      if (open_file(107, in_carbon%co2_yr_cbn)) then
        do
-          open (107,file="co2_yr.dat")
 !! open output file
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit

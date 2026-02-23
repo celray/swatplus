@@ -5,6 +5,7 @@
       use climate_module
       use time_module
       use maximum_data_module
+      use utils, only: open_file
       
       implicit none
       
@@ -15,20 +16,12 @@
       integer :: imo = 0              !           |counter
       integer :: iyr = 0              !           |counter
       integer :: imo_atmo = 0         !           |
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: iyrc_atmo = 0        !           |
       
       eof = 0
 
-      inquire (file=in_cli%atmo_cli,exist=i_exist)
-      if (.not. i_exist .or. in_cli%atmo_cli == "null") then
-        !!no filename 
-        allocate (atmodep(0:0))
-        allocate (atmo_n(0:0))
-        db_mx%atmodep = 0
-      else
+      if (open_file(127, in_cli%atmo_cli)) then
         do
-          open (127,file = in_cli%atmo_cli)
           read (127,*,iostat=eof) titldum
           if (eof < 0) exit
           read (127,*,iostat=eof) header
@@ -122,6 +115,11 @@
           end do    ! iadep
           exit
         end do
+      else
+        !!no filename
+        allocate (atmodep(0:0))
+        allocate (atmo_n(0:0))
+        db_mx%atmodep = 0
       end if        ! if file exists
 
       db_mx%atmodep = atmodep_cont%num_sta

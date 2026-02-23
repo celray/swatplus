@@ -5,26 +5,21 @@
       use maximum_data_module
       use channel_data_module
       use sd_channel_module
+      use utils, only: open_file
 
       implicit none
-      
+
       character (len=80) :: titldum = "" !          |title of file
       character (len=80) :: header = ""  !          |header of file
       integer :: eof = 0               !          |end of file
       integer :: imax = 0              !units     |description
-      logical :: i_exist               !          |check to determine if file exists
       integer :: ich = 0               !none      |counter
-      
+
       eof = 0
       imax = 0
-      
-      inquire (file=in_cha%init, exist=i_exist)
-      if (.not. i_exist .or. in_cha%init == "null") then
-        allocate (ch_init(0:0))
-        allocate (sd_init(0:0))
-      else   
+
+      if (open_file(105, in_cha%init)) then
       do
-       open (105,file=in_cha%init)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -52,6 +47,9 @@
        close (105)
       exit
       enddo
+      else
+        allocate (ch_init(0:0))
+        allocate (sd_init(0:0))
       endif
 
       return 

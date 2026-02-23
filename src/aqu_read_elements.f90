@@ -5,6 +5,7 @@
       use hydrograph_module
       use aquifer_module
       use maximum_data_module
+      use utils, only: open_file
       
       implicit none
       
@@ -15,7 +16,6 @@
       integer :: eof = 0                !             |end of file
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
       integer :: mcal = 0               !             |
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: mreg = 0               !             |
       integer :: i = 0                  !none         |counter
       integer :: k = 0                  !             |
@@ -30,10 +30,8 @@
       imax = 0
       mcal = 0
             
-    inquire (file=in_regs%def_aqu, exist=i_exist)
-    if (i_exist .or. in_regs%def_aqu /= "null") then
+    if (open_file(107, in_regs%def_aqu)) then
       do
-        open (107,file=in_regs%def_aqu)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -83,10 +81,8 @@
       end if      
 
     !! setting up regions for aquifer soft cal and/or output by type
-    inquire (file=in_regs%def_aqu_reg, exist=i_exist)
-    if (i_exist .or. in_regs%def_aqu_reg /= "null") then
+    if (open_file(107, in_regs%def_aqu_reg)) then
       do
-        open (107,file=in_regs%def_aqu)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -143,10 +139,8 @@
       end if    ! mreg > 0
       
       !!read data for each element in all landscape cataloging units
-      inquire (file=in_regs%ele_aqu, exist=i_exist)
-      if (i_exist .or. in_regs%ele_aqu /= "null") then
+      if (open_file(107, in_regs%ele_aqu)) then
       do
-        open (107,file=in_regs%ele_aqu)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

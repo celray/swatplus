@@ -3,24 +3,22 @@
       use input_file_module
       use basin_module
       use time_module
-      
+      use utils, only: open_file
+
       implicit none
-       
+
       character (len=500) :: header = "" !              |header of file
       character (len=80) :: titldum = "" !              |title of file
       character (len=16) :: name = ""  !              |name
       integer :: eof = 0               !              |end of file
-      logical :: i_exist               !              |check to determine if file exists
       integer :: ii = 0                !none          |counter
       integer :: result
-       
+
       eof = 0
 
       !! read time codes
-      inquire (file=in_sim%prt, exist=i_exist)
-      if (i_exist .or. in_sim%prt /= "null") then
+      if (open_file(107, in_sim%prt)) then
       do
-        open (107,file=in_sim%prt)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

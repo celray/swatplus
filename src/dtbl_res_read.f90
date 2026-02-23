@@ -1,5 +1,5 @@
       subroutine dtbl_res_read
-      
+
       use maximum_data_module
       use reservoir_data_module
       use landuse_data_module
@@ -9,30 +9,26 @@
       use input_file_module
       use conditional_module
       use hydrograph_module, only : recall
-      
+      use utils, only: open_file
+
       implicit none
-                  
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      integer :: i = 0                !none       |counter 
+      integer :: i = 0                !none       |counter
       integer :: mdtbl = 0            !none       |ending of loop
-      integer :: ic = 0               !none       |counter 
-      integer :: ial = 0              !none       |counter 
-      integer :: iac = 0              !none       !counter 
-      logical :: i_exist              !none       |check to determine if file exists
+      integer :: ic = 0               !none       |counter
+      integer :: ial = 0              !none       |counter
+      integer :: iac = 0              !none       !counter
       integer :: idb = 0              !none       |counter
-       
+
       mdtbl = 0
       eof = 0
-      
+
       !! read all data from hydrol.dat
-      inquire (file=in_cond%dtbl_res, exist=i_exist)
-      if (.not. i_exist .or. in_cond%dtbl_res == "null") then
-        allocate (dtbl_res(0:0))
-      else
+      if (open_file(107, in_cond%dtbl_res)) then
         do
-          open (107,file=in_cond%dtbl_res)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) mdtbl
@@ -53,7 +49,7 @@
             allocate (dtbl_res(i)%act_typ(dtbl_res(i)%acts), source = 0)
             allocate (dtbl_res(i)%act_app(dtbl_res(i)%acts), source = 0)
             allocate (dtbl_res(i)%act_outcomes(dtbl_res(i)%acts,dtbl_res(i)%alts))
-            
+
             !read conditions and condition alternatives
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -61,7 +57,7 @@
               read (107,*,iostat=eof) dtbl_res(i)%cond(ic), (dtbl_res(i)%alt(ic,ial), ial = 1, dtbl_res(i)%alts)
               if (eof < 0) exit
             end do
-                        
+
             !read actions and action outcomes
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -71,11 +67,11 @@
             end do
             read (107,*,iostat=eof)
             if (eof < 0) exit
-            
+
             !cross walk characters to get array numbers
             do iac = 1, dtbl_res(i)%acts
                 select case (dtbl_res(i)%act(iac)%typ)
-                                  
+
                 case ("release")
                   select case (dtbl_res(i)%act(iac)%option)
                     case ("weir")
@@ -85,7 +81,7 @@
                         exit
                       end if
                     end do
-            
+
                     case ("meas")
                     do idb = 1, db_mx%recall_max
                       if (dtbl_res(i)%act(iac)%file_pointer == recall(idb)%name) then
@@ -94,17 +90,19 @@
                       end if
                     end do
                     end select
-                    
+
                  end select
-                
+
             end do
-            
+
           end do
           db_mx%dtbl_res = mdtbl
           exit
         enddo
+        close (107)
+      else
+        allocate (dtbl_res(0:0))
       endif
-      close (107)
-      
-      return  
+
+      return
       end subroutine dtbl_res_read

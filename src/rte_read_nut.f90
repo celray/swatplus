@@ -8,7 +8,9 @@
 !!    apply to all reservoirs in the watershed.    
 
       use channel_data_module
-      
+      use input_file_module
+      use utils, only: open_file
+
       implicit none      
       
       character (len=80) :: titldum = ""  !             |title of file
@@ -21,12 +23,8 @@
       eof = 0
       imax = 0
 
-      inquire (file="nutrients.rte",exist=i_exist)
-      if (.not. i_exist) then
-        allocate (rte_nut(0:0))
-      else
+      if (open_file(105, in_constit%nut_rte)) then
       do
-        open (105,file="nutrients.rte")
         read (105,*,iostat=eof) titldum
         if (eof < 0) exit
         read (105,*,iostat=eof) header
@@ -53,6 +51,8 @@
         end do
         exit
       enddo
+      else
+        allocate (rte_nut(0:0))
       endif
       close(105)
 

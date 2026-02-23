@@ -5,8 +5,9 @@
       use calibration_data_module
       use landuse_data_module
       use hydrograph_module
-      use hru_module, only : hru, ihru 
+      use hru_module, only : hru, ihru
       use output_landscape_module
+      use utils, only: open_file
       
       implicit none
       
@@ -15,7 +16,6 @@
       character (len=80) :: titldum = ""  !             |title of file
       character (len=80) :: header = "" !             |header of file
       integer :: eof = 0                !             |end of file
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
       integer :: mcal = 0               !             |
       integer :: mreg = 0               !             |
@@ -36,10 +36,8 @@
       mreg = 0
             
     !! setting up regions for landscape soft cal and/or output by landuse
-    inquire (file=in_regs%def_reg, exist=i_exist)
-    if (i_exist .or. in_regs%def_reg /= "null") then
+    if (open_file(107, in_regs%def_reg)) then
       do
-        open (107,file=in_regs%def_reg)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg, mlug
@@ -127,10 +125,8 @@
       end if      
 
       !!read data for each element in all landscape cataloging units
-      inquire (file=in_regs%ele_reg, exist=i_exist)
-      if (i_exist .or. in_regs%ele_reg /= "null") then
+      if (open_file(107, in_regs%ele_reg)) then
       do
-        open (107,file=in_regs%ele_reg)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

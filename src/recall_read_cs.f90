@@ -8,7 +8,8 @@
       use maximum_data_module
       use time_module
       use exco_module
-      
+      use utils, only: open_file
+
       implicit none      
  
       character (len=80) :: titldum = ""!           |title of file
@@ -37,10 +38,8 @@
       imax = 0
 
       !read all recall files
-      inquire (file="cs_recall.rec", exist=i_exist)
-      if (i_exist .or. in_rec%recall_rec /= "null") then
+      if (open_file(107, in_rec%recall_cs)) then
       do
-        open (107,file="cs_recall.rec")
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

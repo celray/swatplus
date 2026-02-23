@@ -7,6 +7,7 @@
       use aqu_pesticide_module
       use hydrograph_module
       use constituent_mass_module
+      use utils, only: open_file
       
       implicit none      
       
@@ -14,7 +15,6 @@
       character (len=80) :: header = "" !             |header of file
       integer :: eof = 0                !             |end of file
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: iaqu = 0               !none         |counter
       integer :: ictr = 0
       integer :: isp_ini = 0            !             |                    !             |
@@ -35,11 +35,9 @@
       imax = 0
             
       !read initial.aqu_cs
-      inquire (file="initial.aqu_cs",exist=i_exist)
-      if(i_exist) then
-       
+      if (open_file(105, in_constit%init_aqu_cs)) then
+
         do
-          open (105,file="initial.aqu_cs")
           read (105,*,iostat=eof) titldum
           if (eof < 0) exit
           read (105,*,iostat=eof) header

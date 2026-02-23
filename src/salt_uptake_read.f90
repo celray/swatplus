@@ -9,8 +9,8 @@
       use constituent_mass_module
       use hydrograph_module
       use salt_module
-      use maximum_data_module
-      
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: header = "" !           |header of file
@@ -27,14 +27,10 @@
       if(cs_db%num_salts > 0) then
       
       salt_uptake_on = 0
-      inquire (file='salt_uptake',exist=i_exist)
-      if(i_exist) then
-        
+      if (open_file(5054, in_salt%uptake_slt)) then
+
         !turn on salt uptake feature
         salt_uptake_on = 1
-        
-        !open and read first lines
-        open(5054,file='salt_uptake')
         read(5054,*) header
         read(5054,*) header
         read(5054,*) header

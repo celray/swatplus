@@ -1,9 +1,14 @@
 module utils
+    use iso_fortran_env, only: error_unit
     IMPLICIT NONE
 
     integer, parameter :: MAX_TABLE_COLS = 100
     integer, parameter :: MAX_NAME_LEN = 50
     integer, parameter :: MAX_LINE_LEN = 2500
+
+    !! Unit numbers for output files (opened in proc_bsn.f90 and main.f90)
+    integer, parameter :: diag_unit = 9001
+    integer, parameter :: sim_unit = 9003
 
     public :: table_reader
 
@@ -42,6 +47,84 @@ module utils
     end type table_reader
 
 contains
+
+!! Open a file with 3-tier error handling:
+!!   required=.true.  → Error + stop 1
+!!   default          → Warning on console + diagnostics + simulation.out, continues
+!!   hardcoded=.true. → Note to diagnostics + simulation.out only (silent on console), continues
+logical function open_file(iunit, filename, required, hardcoded)
+    implicit none
+    integer, intent(in) :: iunit
+    character(len=*), intent(in) :: filename
+    logical, intent(in), optional :: required
+    logical, intent(in), optional :: hardcoded
+
+    logical :: i_exist
+    logical :: is_required
+    logical :: is_hardcoded
+
+    !! skip "null" filenames silently
+    if (trim(filename) == "null" .or. len_trim(filename) == 0) then
+        open_file = .false.
+        return
+    end if
+
+    is_required = .false.
+    if (present(required)) is_required = required
+
+    is_hardcoded = .false.
+    if (present(hardcoded)) is_hardcoded = hardcoded
+
+    inquire(file=filename, exist=i_exist)
+
+    if (.not. i_exist) then
+        if (is_required) then
+            write(error_unit, '(A)') ''
+            write(error_unit, '(A,A,A)') '! Error - required file ', trim(filename), ' not found'
+            write(diag_unit, '(A,A,A)') '! Error - required file ', trim(filename), ' not found'
+            write(sim_unit, '(A,A,A)') '! Error - required file ', trim(filename), ' not found'
+            stop 1
+        else if (is_hardcoded) then
+            write(diag_unit, '(A,A,A)') '! Note - optional file ', trim(filename), ' not found'
+            write(sim_unit, '(A,A,A)') '! Note - optional file ', trim(filename), ' not found'
+            open_file = .false.
+            return
+        else
+            write(error_unit, '(A,A,A)') '! Warning - ', trim(filename), ' listed in file.cio but not found'
+            write(diag_unit, '(A,A,A)') '! Warning - ', trim(filename), ' listed in file.cio but not found'
+            write(sim_unit, '(A,A,A)') '! Warning - ', trim(filename), ' listed in file.cio but not found'
+            open_file = .false.
+            return
+        end if
+    end if
+
+    open(iunit, file=filename, status='old', action='read')
+    open_file = .true.
+
+end function open_file
+
+!! Validate that a required array was allocated with the expected size
+subroutine validate_array_allocation(array_name, actual_size, expected_count, source_file)
+    implicit none
+    character(len=*), intent(in) :: array_name
+    integer, intent(in) :: actual_size
+    integer, intent(in) :: expected_count
+    character(len=*), intent(in) :: source_file
+
+    if (expected_count > 0 .and. actual_size < expected_count) then
+        write(error_unit, '(A)') ''
+        write(error_unit, '(A,A,A)') '! Error - due to missing file ', trim(source_file), ','
+        write(error_unit, '(A,A,A)') '!         array ', trim(array_name), ' could not be allocated.'
+        write(error_unit, '(A,I0,A,I0,A)') '!         Expected ', expected_count, ' elements but got ', actual_size, '.'
+        write(diag_unit, '(A,A,A)') '! Error - due to missing file ', trim(source_file), ','
+        write(diag_unit, '(A,A,A)') '!         array ', trim(array_name), ' could not be allocated.'
+        write(diag_unit, '(A,I0,A,I0,A)') '!         Expected ', expected_count, ' elements but got ', actual_size, '.'
+        write(sim_unit, '(A,A,A)') '! Error - due to missing file ', trim(source_file), ','
+        write(sim_unit, '(A,A,A)') '!         array ', trim(array_name), ' could not be allocated.'
+        write(sim_unit, '(A,I0,A,I0,A)') '!         Expected ', expected_count, ' elements but got ', actual_size, '.'
+        stop 1
+    end if
+end subroutine validate_array_allocation
 
 subroutine init(self, unit, file_name, start_row_numbr, start_data_row_numbr)
     class(table_reader), intent(inout) :: self

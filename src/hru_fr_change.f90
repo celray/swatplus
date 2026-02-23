@@ -8,7 +8,8 @@
       use reservoir_data_module
       use reservoir_module
       use ru_module
-      
+      use utils, only: open_file
+
       implicit none
   
       character(len=25), intent (in) :: lsu_elem_upd    !file name of updated lsu_unit.ele 
@@ -16,7 +17,6 @@
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !none       |counter
       integer :: isp = 0              !none       |counter
       integer :: k = 0                !           |
@@ -31,10 +31,8 @@
       eof = 0
       
       !!read data for each element in all routing units
-      inquire (file=ru_elem_upd, exist=i_exist)
-      if (i_exist .or. ru_elem_upd /= "null") then
+      if (open_file(107, ru_elem_upd)) then
         do
-        open (107,file=ru_elem_upd)
 
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
@@ -66,10 +64,8 @@
       close (107)
 
       !!read data for each element in all landscape cataloging units
-      inquire (file=lsu_elem_upd, exist=i_exist)
-      if (i_exist .or. lsu_elem_upd /= "null") then
+      if (open_file(107, lsu_elem_upd)) then
       do
-        open (107,file=lsu_elem_upd)
 
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit

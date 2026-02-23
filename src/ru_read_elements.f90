@@ -4,6 +4,7 @@
       use input_file_module
       use maximum_data_module
       use dr_module
+      use utils, only: open_file
       
       implicit none
       
@@ -16,7 +17,6 @@
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
       integer :: nspu = 0             !           |
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !none       |counter
       integer :: max                  !           | 
       integer :: isp = 0              !none       |counter
@@ -36,10 +36,8 @@
       imax = 0
       
       !!read data for each element in all subbasins
-      inquire (file=in_ru%ru_ele, exist=i_exist)
-      if (i_exist .or. in_ru%ru_ele /= "null") then
+      if (open_file(107, in_ru%ru_ele, required=.true.)) then
       do
-        open (107,file=in_ru%ru_ele)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -89,10 +87,8 @@
       end if
       
       !!read subbasin definition data -ie. hru"s in the subbasin
-      inquire (file=in_ru%ru_def, exist=i_exist)
-      if (i_exist .or. in_ru%ru_def /= "null") then
+      if (open_file(107, in_ru%ru_def)) then
       do
-        open (107,file=in_ru%ru_def)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

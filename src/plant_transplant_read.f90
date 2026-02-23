@@ -3,7 +3,8 @@
       use input_file_module
       use maximum_data_module
       use plant_data_module
-      
+      use utils, only: open_file
+
       implicit none 
 
       integer :: ic = 0               !none       |counter
@@ -16,12 +17,8 @@
       eof = 0
       imax = 0
 
-      inquire (file="transplant.plt", exist=i_exist)
-      if (.not. i_exist .or. "transplant.plt" == " null") then
-        allocate (transpl(0:0))
-      else
+      if (open_file(104, in_ops%transplant_ops)) then
       do
-        open (104,file="transplant.plt")
         read (104,*,iostat=eof) titldum
         if (eof < 0) exit
         read (104,*,iostat=eof) header
@@ -46,6 +43,8 @@
         
         exit
       enddo
+      else
+        allocate (transpl(0:0))
       endif
 
       db_mx%transplant = imax

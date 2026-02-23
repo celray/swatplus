@@ -4,6 +4,7 @@
       use maximum_data_module
       use plant_data_module
       use basin_module
+      use utils, only: open_file
       
       implicit none 
 
@@ -17,21 +18,14 @@
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
       integer :: mpl = 0              !           | 
-      logical :: i_exist              !none       |check to determine if file exists
-      
-      
+
+
       eof = 0
       imax = 0
       mpl = 0
 
-      inquire (file=in_parmdb%plants_plt, exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%plants_plt == " null") then
-        allocate (pldb(0:0))
-        allocate (plcp(0:0))
-        allocate (pl_class(0:0))
-      else
+      if (open_file(104, in_parmdb%plants_plt)) then
       do
-        open (104,file=in_parmdb%plants_plt)
         read (104,*,iostat=eof) titldum
         if (eof < 0) exit
         read (104,*,iostat=eof) header
@@ -63,6 +57,10 @@
         
         exit
       enddo
+      else
+        allocate (pldb(0:0))
+        allocate (plcp(0:0))
+        allocate (pl_class(0:0))
       endif
 
       db_mx%plantparm = imax

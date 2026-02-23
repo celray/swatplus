@@ -1,39 +1,33 @@
       subroutine readpcom
-      
+
       use input_file_module
       use maximum_data_module
       use plant_data_module
-      
-      implicit none      
-      
+      use utils, only: open_file
+
+      implicit none
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       character (len=13) :: name = "" !           |
       integer :: eof = 0              !           |end of file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: mcom = 0             !           |
       integer :: icom = 0             !none       |counter
       integer :: imax = 0             !none       |counter
       integer :: numb = 0             !none       |end of loop
       integer :: ii = 0               !none       |counter
-      integer :: mpcom = 0            !none       |end of loop   
+      integer :: mpcom = 0            !none       |end of loop
       integer :: iplt = 0             !none       |counter
       integer :: ipldb = 0            !none       |counter
-      
-      
+
+
       mcom = 0
       eof = 0
       imax = 0
 
 !! Open plant community data file
-      inquire (file=in_init%plant, exist=i_exist)
-      if (.not. i_exist .or. in_init%plant == "null") then
-        allocate (pcomdb(0:0))
-        allocate (pcomdb(0)%pl(0:0))
-        db_mx%plantcom = mcom + 1
-      else
-      do     
-       open (113,file=in_init%plant)
+      if (open_file(113, in_init%plant)) then
+      do
        read (113,*,iostat=eof) titldum
        if (eof < 0) exit
        read (113,*,iostat=eof) header
@@ -48,15 +42,15 @@
              if (eof < 0) exit
              imax = imax + 1
           end do
-          
+
        allocate (pcomdb(0:imax))
-       
+
        rewind (113)
        read (113,*,iostat=eof) titldum
        if (eof < 0) exit
        read (113,*,iostat=eof) header
        if (eof < 0) exit
-       
+
        do icom = 1, imax
        ! loop through all plant communities
          read (113,*,iostat=eof)  pcomdb(icom)%name, pcomdb(icom)%plants_com, pcomdb(icom)%rot_yr_ini
@@ -71,23 +65,27 @@
            if (eof < 0) exit
 
           do ipldb = 1, db_mx%plantparm
-            if (pcomdb(icom)%pl(iplt)%cpnm == pldb(ipldb)%plantnm) then 
+            if (pcomdb(icom)%pl(iplt)%cpnm == pldb(ipldb)%plantnm) then
               pcomdb(icom)%pl(iplt)%db_num = ipldb
               exit
             end if
-          end do 
+          end do
           if (pcomdb(icom)%pl(iplt)%db_num == 0) then
             write (9001,*) " plant com", icom, &
-              " plant numb", iplt, pcomdb(icom)%pl(iplt)%cpnm, " not found in plants.plt database" 
+              " plant numb", iplt, pcomdb(icom)%pl(iplt)%cpnm, " not found in plants.plt database"
           end if
           if (eof < 0) exit
          end do
        end do
       end do
-      end if
-      
-      db_mx%plantcom = imax
-      
       close (113)
+      else
+        allocate (pcomdb(0:0))
+        allocate (pcomdb(0)%pl(0:0))
+        db_mx%plantcom = mcom + 1
+      end if
+
+      db_mx%plantcom = imax
+
       return
       end subroutine readpcom

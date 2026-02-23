@@ -6,6 +6,7 @@
       use input_file_module
       use organic_mineral_mass_module
       use maximum_data_module
+      use utils, only: open_file
 
       implicit none
       
@@ -15,8 +16,6 @@
       integer :: imax = 0
       integer :: ob1 = 0
       integer :: ob2 = 0
-      logical :: i_exist              !none       |check to determine if file exists
-
       integer :: ii = 0
       integer :: idr = 0
       integer :: idr_om = 0
@@ -26,10 +25,8 @@
       imax = 0
       
       !read delivery ratio organic-mineral data
-      inquire (file=in_delr%om, exist=i_exist)
-      if (i_exist .or. in_delr%om /= "null") then
+      if (open_file(107, in_delr%om)) then
         do
-          open (107,file=in_delr%om)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header

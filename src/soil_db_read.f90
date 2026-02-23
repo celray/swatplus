@@ -3,6 +3,7 @@
       use input_file_module
       use maximum_data_module
       use soil_data_module
+      use utils, only: open_file
       
       implicit none
       
@@ -10,8 +11,7 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: j = 0                !none       |hru            
+      integer :: j = 0                !none       |hru
       integer :: nlyr = 0             !           |
       integer :: lyr = 0              !none       |counter
       integer :: mlyr = 0             !           |
@@ -20,13 +20,8 @@
       eof = 0
       imax = 0
 
-      inquire (file=in_sol%soils_sol,exist=i_exist)
-      if (.not. i_exist .or. in_sol%soils_sol == "null") then
-        allocate (soildb(0:0))
-        allocate (soildb(0)%ly(0:0))
-      else
-        do  
-          open (107,file=in_sol%soils_sol)
+      if (open_file(107, in_sol%soils_sol)) then
+        do
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -79,6 +74,9 @@
         end do
         exit
         enddo
+        else
+        allocate (soildb(0:0))
+        allocate (soildb(0)%ly(0:0))
         endif
       
         close (107)

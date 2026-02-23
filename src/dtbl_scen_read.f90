@@ -1,5 +1,5 @@
       subroutine dtbl_scen_read
-      
+
       use maximum_data_module
       use reservoir_data_module
       use landuse_data_module
@@ -8,30 +8,26 @@
       use fertilizer_data_module
       use input_file_module
       use conditional_module
-      
+      use utils, only: open_file
+
       implicit none
-                  
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      integer :: i = 0                !none       |counter 
+      integer :: i = 0                !none       |counter
       integer :: mdtbl = 0            !none       |ending of loop
-      integer :: ic = 0               !none       |counter 
-      integer :: ial = 0              !none       |counter 
-      integer :: iac = 0              !none       !counter 
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: ilum = 0             !none       |counter      
-      
+      integer :: ic = 0               !none       |counter
+      integer :: ial = 0              !none       |counter
+      integer :: iac = 0              !none       !counter
+      integer :: ilum = 0             !none       |counter
+
       mdtbl = 0
       eof = 0
-      
+
       !! read all data from hydrol.dat
-      inquire (file=in_cond%dtbl_scen, exist=i_exist)
-      if (.not. i_exist .or. in_cond%dtbl_scen == "null") then
-        allocate (dtbl_scen(0:0))
-      else
+      if (open_file(107, in_cond%dtbl_scen)) then
         do
-          open (107,file=in_cond%dtbl_scen)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) mdtbl
@@ -54,7 +50,7 @@
             allocate (dtbl_scen(i)%lu_chg_mx(dtbl_scen(i)%acts), source = 0)
 
             allocate (dtbl_scen(i)%act_outcomes(dtbl_scen(i)%acts,dtbl_scen(i)%alts))
-            
+
             !read conditions and condition alternatives
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -62,7 +58,7 @@
               read (107,*,iostat=eof) dtbl_scen(i)%cond(ic), (dtbl_scen(i)%alt(ic,ial), ial = 1, dtbl_scen(i)%alts)
               if (eof < 0) exit
             end do
-                        
+
             !read actions and action outcomes
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -72,7 +68,7 @@
             end do
             read (107,*,iostat=eof)
             if (eof < 0) exit
-            
+
             !cross walk characters to get array numbers
             do iac = 1, dtbl_scen(i)%acts
                 select case (dtbl_scen(i)%act(iac)%typ)
@@ -84,15 +80,17 @@
                     end if
                   end do
                 end select
-                
+
             end do
-            
+
           end do
           db_mx%dtbl_scen = mdtbl
           exit
         enddo
+        close (107)
+      else
+        allocate (dtbl_scen(0:0))
       endif
-      close (107)
-      
-      return  
+
+      return
       end subroutine dtbl_scen_read

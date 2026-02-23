@@ -8,14 +8,14 @@
       use hydrograph_module
       use constituent_mass_module
       use sd_channel_module
-      
+      use utils, only: open_file
+
       implicit none 
       
       character (len=80) :: titldum = ""!         |title of file
       character (len=80) :: header = "" !         |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !none       |counter
       integer :: isrc = 0             !none       |number of water treatment objects
       integer :: iom = 0              !none       |counter
@@ -26,12 +26,8 @@
       
       !! read water allocation inputs
 
-      inquire (file='outside_src.wal', exist=i_exist)
-      if (.not. i_exist .or. 'outside_src.wal' == "null") then
-        allocate (osrc(0:0))
-      else
-      do 
-        open (107,file='outside_src.wal')
+      if (open_file(107, in_wal%outside_src)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) imax
@@ -76,6 +72,8 @@
           
         end do
       end do
+      else
+        allocate (osrc(0:0))
       end if
       close(107)
 

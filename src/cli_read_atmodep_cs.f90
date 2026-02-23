@@ -8,7 +8,8 @@
       use time_module
       use maximum_data_module
       use constituent_mass_module
-      
+      use utils, only: open_file
+
       implicit none
       
       integer :: eof = 0              !           |end of file
@@ -24,12 +25,8 @@
       !only proceed if there are constituents in the simulation
       if(cs_db%num_cs > 0) then
       
-      inquire (file='cs_atmo.cli',exist=i_exist)
-      if(i_exist) then
+      if (open_file(5050, in_cli%atmo_cs)) then
         cs_atmo = "y"
-        
-        !open the file; skip first two lines (commentary)
-        open(5050,file='cs_atmo.cli')
         read(5050,*)
         read(5050,*)
         read(5050,*)

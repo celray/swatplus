@@ -5,15 +5,15 @@
       use calibration_data_module
       use hydrograph_module
       use reservoir_module
-      
+      use utils, only: open_file
+
       implicit none
-      
+
       external :: define_unit_elements
 
       character (len=500) :: header = "" !              |header of file
       character (len=80) :: titldum = "" !              |title of file
       integer :: eof = 0               !              |end of file
-      logical :: i_exist               !              |check to determine if file exists
       integer :: imax = 0              !none          |determine max number for array (imax) and total number in file
       integer :: mcal = 0              !              |
       integer :: mreg = 0               !             |
@@ -29,10 +29,8 @@
       mcal = 0
       mreg = 0
             
-    inquire (file=in_regs%def_res, exist=i_exist)
-    if (i_exist .or. in_regs%def_res /= "null") then
+    if (open_file(107, in_regs%def_res)) then
       do
-        open (107,file=in_regs%def_res)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -76,10 +74,8 @@
       end if
         
     !! setting up regions for reservoir soft cal and/or output by type
-    inquire (file=in_regs%def_res_reg, exist=i_exist)
-    if (i_exist .or. in_regs%def_res_reg /= "null") then
+    if (open_file(107, in_regs%def_res_reg)) then
       do
-        open (107,file=in_regs%def_res_reg)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -135,10 +131,8 @@
       end if
       
       !!read data for each element in all landscape cataloging units
-      inquire (file=in_regs%ele_res, exist=i_exist)
-      if (i_exist .or. in_regs%ele_res /= "null") then
+      if (open_file(107, in_regs%ele_res)) then
       do
-        open (107,file=in_regs%ele_res)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

@@ -6,29 +6,27 @@
       use reservoir_module
       use res_salt_module
       use res_cs_module
-      
+      use input_file_module, only: in_constit
+      use utils, only: open_file
+
       implicit none
 
       integer :: i = 0
-      
+
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: ires = 0             !none       |counter 
+      integer :: ires = 0             !none       |counter
       integer :: k = 0                !           |
       integer :: isalt = 0            !none      |counter
       integer :: ics = 0              !none      |counter
-      
+
       eof = 0
       imax = 0
-            
+
       !read reservoir.res_cs
-      inquire (file="reservoir.res_cs",exist=i_exist)
-      if(i_exist) then
-      
-        !open file
-        open(105,file="reservoir.res_cs")
+      if (open_file(105, in_constit%reservoir_cs)) then
+
         read(105,*) header
         read(105,*) header
         

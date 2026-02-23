@@ -14,8 +14,9 @@
       use maximum_data_module
       use cs_data_module
       use constituent_mass_module, only : cs_db
-      use input_file_module, only : in_con
-      
+      use input_file_module, only : in_con, in_constit, in_gwf
+      use utils, only: open_file
+
       implicit none
       
       character*10 b(3) 
@@ -162,7 +163,7 @@
 
      
       !read in gwflow module information from gwflow.input --------------------------------------------------------------------------------
-      open(in_gw,file='gwflow.input')
+      open(in_gw,file=in_gwf%gw_input)
       read(in_gw,*) header
       read(in_gw,*) header
       
@@ -194,14 +195,14 @@
       !check connections (HRU-cell or LSU-cell) -----------------------------------------------------------------------
       write(out_gw,*) '     checking for connection (HRU, LSU) files...'
       if (conn_type == 1) then !HRU-cell
-        inquire(file='gwflow.hrucell',exist=i_exist)
+        inquire(file=in_gwf%hrucell,exist=i_exist)
         if (i_exist) then
           hru_cells_link = 1
           lsu_cells_link = 0
           write(out_gw,*) '          found gwflow.hrucell: proceed'
         else
           hru_cells_link = 0
-          inquire(file='gwflow.lsucell',exist=i_exist) !try LSU-cell connection instead
+          inquire(file=in_gwf%lsucell,exist=i_exist) !try LSU-cell connection instead
           if (i_exist) then
             lsu_cells_link = 1
             gw_soil_flag = 0 !gw-->soil transfer can occur only for HRU-cell connection
@@ -212,7 +213,7 @@
           endif
         endif
       elseif (conn_type == 2) then !LSU-cell
-        inquire(file='gwflow.lsucell',exist=i_exist)
+        inquire(file=in_gwf%lsucell,exist=i_exist)
         if (i_exist) then
           lsu_cells_link = 1
           hru_cells_link = 0
@@ -223,7 +224,7 @@
           write(out_gw,*) '          gwflow.lsucell: gw-->wetland transfer not simulated'
         else
           lsu_cells_link = 0
-          inquire(file='gwflow.hrucell',exist=i_exist) !try HRU-cell connection instead
+          inquire(file=in_gwf%hrucell,exist=i_exist) !try HRU-cell connection instead
           if (i_exist) then
             hru_cells_link = 1
             write(out_gw,*) '          gwflow.lsucell not found: using gwflow.hrucell'
@@ -632,7 +633,6 @@
       read(in_gw,*) gw_num_obs_wells
       allocate (gw_obs_cells(gw_num_obs_wells), source = 0)
       !check to see if there are USGS well names (for the national model)
-      inquire(file='usgs_annual_head',exist=i_exist)
       if(usgs_obs == 1) then
         allocate (usgs_id(gw_num_obs_wells), source = 0.d0)
       endif
@@ -677,7 +677,7 @@
       
       !if usgs observation wells, read in annual head data from national data set -------------------------------------
       if (usgs_obs == 1) then
-        open(in_usgs_head,file='usgs_annual_head')
+        open(in_usgs_head,file=in_gwf%usgs_head)
         read(in_usgs_head,*) 
         num_usgs_wells = 356785 
         allocate (usgs_head_vals(gw_num_obs_wells,101), source = 0.)
@@ -920,9 +920,7 @@
       open(out_hru_pump_mo,file='gwflow_flux_pumping_hru_mo')
       write(out_hru_pump_mo,*) 'Monthly pumped volume (m3) (irrigation) for HRUs'
       write(out_hru_pump_mo,*) 'Columns: each month of the simulation'
-      inquire(file='gwflow.hru_pump_observe',exist=i_exist)
-      if (hru_pump_flag == 1) then
-        open(in_hru_pump_obs,file='gwflow.hru_pump_observe')
+      if (hru_pump_flag == 1 .and. open_file(in_hru_pump_obs, in_gwf%hru_pump_observe)) then
         read(in_hru_pump_obs,*)
         read(in_hru_pump_obs,*) num_hru_pump_obs
         allocate (hru_pump_ids(num_hru_pump_obs), source = 0)
@@ -939,10 +937,8 @@
       
       !groundwater pumping (specified) ------------------------------------------------------------
       if (gw_pumpex_flag == 1) then
-      inquire(file='gwflow.pumpex',exist=i_exist)
-      if(i_exist) then
+      if(open_file(in_gw, in_gwf%pumpex)) then
         write(out_gw,*) '          groundwater pumping external (gwflow.pumpex found)'
-        open(in_gw,file='gwflow.pumpex')
         read(in_gw,*) header
         read(in_gw,*) gw_npumpex !number of pumps
         allocate (gw_pumpex_cell(gw_npumpex), source = 0)
@@ -977,10 +973,8 @@
       !tile drainage outflow ----------------------------------------------------------------------
       !tile drain cell information
       if (gw_tile_flag == 1) then
-      inquire(file='gwflow.tiles',exist=i_exist)
-      if(i_exist) then
+      if(open_file(in_gw, in_gwf%tiles)) then
         write(out_gw,*) '          groundwater-tile drainage outflow (gwflow.tiles found)'
-        open(in_gw,file='gwflow.tiles')
         read(in_gw,*) header
         !read in tile parameters
         read(in_gw,*) gw_tile_depth
@@ -1051,10 +1045,8 @@
 
       !aquifer-reservoir exchange -----------------------------------------------------------------
       if (gw_res_flag == 1) then
-      inquire(file='gwflow.rescells',exist=i_exist)
-      if(i_exist) then
+      if(open_file(in_res_cell, in_gwf%rescells)) then
         write(out_gw,*) '          groundwater-reservoir exchange (gwflow.rescells found)'
-        open(in_res_cell,file='gwflow.rescells')
         read(in_res_cell,*) header
         read(in_res_cell,*) header
         !read in reservoir bed conductivity (m/day) and thickness (m)
@@ -1122,10 +1114,8 @@
       allocate (flood_freq(sp_ob%chandeg), source = 0)
       flood_freq = 0
       if (gw_fp_flag == 1) then
-      inquire(file='gwflow.floodplain',exist=i_exist)
-      if(i_exist) then
+      if(open_file(in_fp_cell, in_gwf%floodplain)) then
         write(out_gw,*) '          groundwater-floodplain exchange (gwflow.floodplain found)'
-        open(in_fp_cell,file='gwflow.floodplain')
         read(in_fp_cell,*) header
         read(in_fp_cell,*) gw_fp_ncells !number of floodplain cells
         !number of cells that are linked to each channel
@@ -1182,10 +1172,8 @@
       !groundwater seepage from canals ------------------------------------------------------------
       !canal seepage information (these are for cells that are connected to irrigation canals)
       if (gw_canal_flag == 1) then
-      inquire(file='gwflow.canals',exist=i_exist)
-      if(i_exist) then
+      if(open_file(in_canal_cell, in_gwf%canals)) then
         write(out_gw,*) '          canal-->groundwater seepage (gwflow.canals found)'
-        open(in_canal_cell,file='gwflow.canals')
         read(in_canal_cell,*) header
         !read in the number of canals for each channel
         allocate (gw_chan_canl_info(sp_ob%chandeg))!number of canals for each channel
@@ -1344,11 +1332,7 @@
       write(out_gw,*)
       
       if (gw_solute_flag == 1) then
-      inquire(file='gwflow.solutes',exist=i_exist)
-      if(i_exist) then 
-      
-        !open the file
-        open(in_gw,file='gwflow.solutes')
+      if(open_file(in_gw, in_gwf%solutes)) then
       
         !include no3 and p (default)
         gw_nsolute = 2
@@ -1356,8 +1340,7 @@
         gwsol_nm(2) = 'p'
         
         !determine which other solutes should be included
-        inquire(file="constituents.cs", exist=i_exist2)
-        if(i_exist2) then
+        if(len_trim(in_constit%cs_db) > 0 .and. in_constit%cs_db /= "null") then
           if(cs_db%num_salts > 0) then
             gwsol_salt = 1
             do i=1,cs_db%num_salts
@@ -1434,9 +1417,7 @@
         endif
         !if salts active: read in salt mineral data (if provided)
         if(gwsol_salt == 1) then
-          inquire(file='gwflow.solutes.minerals',exist=i_exist)
-          if(gwsol_minl == 1) then
-            open(in_gw_minl,file='gwflow.solutes.minerals')
+          if(gwsol_minl == 1 .and. open_file(in_gw_minl, in_gwf%solutes_minerals)) then
             read(in_gw_minl,*) header
             read(in_gw_minl,*) gw_nminl
             !allocate arrays based on number of salt minerals
@@ -1664,7 +1645,7 @@
       write(out_gw,*) '     read and prepare connection (HRU-cell or LSU-cell)'
       if (lsu_cells_link == 1) then
         write(out_gw,*) '          LSU-cell connections (gwflow.lsucell)'
-        open(in_lsu_cell,file='gwflow.lsucell')  
+        open(in_lsu_cell,file=in_gwf%lsucell)  
         read(in_lsu_cell,*) header
         !read in list of LSUs that are spatially connected to grid cells
         read(in_lsu_cell,*) nlsu !number of LSUs in the model
@@ -1711,7 +1692,6 @@
       !for normal gwflow applications, the Cell-HRU connection will be used, using the gwflow.cellhru file. However, for applications
       !with the national agroecosystem model, the Cell-HUC12 connection will be used. If the gwflow.huc12cell file is present in the folder,
       !then the national model approach will be used.
-      inquire(file='gwflow.huc12cell',exist=i_exist)
       if (nat_model == 1) then
         !read in the HUC12 subwatersheds
         open(5100,file='out.key')
@@ -1745,7 +1725,7 @@
       
       !HRU-cell connection
       write(out_gw,*) '          HRU-cell connections (gwflow.hrucell)'
-      open(in_hru_cell,file='gwflow.hrucell')
+      open(in_hru_cell,file=in_gwf%hrucell)
       read(in_hru_cell,*)
       read(in_hru_cell,*)
       read(in_hru_cell,*)
@@ -1798,7 +1778,7 @@
       !then the national model approach will be used.
       if (nat_model == 1) then
         !read in the list of grid cells for each HUC12
-        open(in_huc_cell,file='gwflow.huc12cell')
+        open(in_huc_cell,file=in_gwf%huc12cell)
         read(in_huc_cell,*)
         read(in_huc_cell,*)
         !read in the list of HUC12 catchments that have connections with grid cells
@@ -1859,7 +1839,7 @@
       cell_num_hrus = 0
       cell_hrus = 0
       cell_hrus_fract = 0.
-      open(in_cell_hru,file='gwflow.cellhru')
+      open(in_cell_hru,file=in_gwf%cellhru)
       read(in_cell_hru,*)
       read(in_cell_hru,*)
       read(in_cell_hru,*) num_unique !number of cells that intersect HRUs
@@ -2375,9 +2355,7 @@
       
       
       !read in monthly streamflow data (if available)
-      inquire(file='gwflow.streamobs',exist=i_exist)
-      if (stream_obs == 1) then
-        open(in_str_obs,file='gwflow.streamobs')
+      if (stream_obs == 1 .and. open_file(in_str_obs, in_gwf%streamobs)) then
         open(out_strobs,file='gwflow_state_obs_flow')
         write(out_strobs,*) 'Channels: observed vs. simulated monthly values'
         read(in_str_obs,*)

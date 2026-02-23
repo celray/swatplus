@@ -6,6 +6,7 @@
       use constituent_mass_module
       use maximum_data_module
       use exco_module
+      use utils, only: open_file
 
       implicit none
  
@@ -15,7 +16,6 @@
       integer :: imax = 0
       integer :: ob1 = 0
       integer :: ob2 = 0
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: ii = 0
       integer :: iexco = 0
       integer :: iexco_om = 0
@@ -25,10 +25,8 @@
       imax = 0
       
       !read all export coefficient data
-      inquire (file=in_exco%om, exist=i_exist)
-      if (i_exist .or. in_exco%om /= "null") then
+      if (open_file(107, in_exco%om)) then
         do
-          open (107,file=in_exco%om)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header

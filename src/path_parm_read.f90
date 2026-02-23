@@ -3,6 +3,7 @@
       use input_file_module
       use pathogen_data_module, only : path_db
       use maximum_data_module
+      use utils, only: open_file
       
       implicit none
 
@@ -11,18 +12,13 @@
       integer :: ibac = 0                !none          |counter  
       integer :: eof = 0                 !              |end of file
       integer :: imax = 0                !none          |counter 
-      logical :: i_exist                 !              |check to determine if file exists
-      
+
       eof = 0
       imax = 0    
       
       !! read pathogen properties
-      inquire (file=in_parmdb%pathcom_db,exist=i_exist)
-      if (.not. i_exist .or. in_parmdb%pathcom_db == "null") then
-         allocate (path_db(0:0))
-      else
+      if (open_file(107, in_parmdb%pathcom_db)) then
       do
-        open (107,file=in_parmdb%pathcom_db)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -51,6 +47,8 @@
         end do
         exit
       enddo
+      else
+         allocate (path_db(0:0))
       endif
       
       close (107)

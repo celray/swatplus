@@ -6,11 +6,11 @@
       use maximum_data_module
       use pesticide_data_module
       use pathogen_data_module
+      use utils, only: open_file
 
       implicit none
          
       character (len=80) :: titldum = ""!           |title of file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: eof = 0              !           |end of file
       integer :: i = 0                !           |
       integer :: imax = 0             !           |
@@ -22,15 +22,8 @@
       eof = 0
       imax = 0
       
-      inquire (file=in_sim%cs_db, exist=i_exist)
-      if (.not. i_exist .or. in_sim%cs_db == "null") then
-        allocate (cs_db%pests(0:0))
-        allocate (cs_db%paths(0:0))
-        allocate (cs_db%metals(0:0))
-        allocate (cs_db%salts(0:0))
-      else
+      if (open_file(106, in_sim%cs_db)) then
       do
-        open (106,file=in_sim%cs_db)
         read (106,*,iostat=eof) titldum
         if (eof < 0) exit
         read (106,*,iostat=eof) cs_db%num_pests
@@ -65,6 +58,11 @@
         read (106,*,iostat=eof) (cs_db%cs(i), i = 1, cs_db%num_cs)
         exit
       end do
+      else
+        allocate (cs_db%pests(0:0))
+        allocate (cs_db%paths(0:0))
+        allocate (cs_db%metals(0:0))
+        allocate (cs_db%salts(0:0))
       end if
 
       do ipest = 1, cs_db%num_pests

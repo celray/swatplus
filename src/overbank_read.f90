@@ -4,6 +4,7 @@
       use input_file_module
       use maximum_data_module
       use sd_channel_module
+      use utils, only: open_file
       
       implicit none 
 
@@ -13,7 +14,6 @@
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
       integer :: nspu = 0             !           |
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: max                  !           |
       integer :: mcha_sp = 0          !           |
       integer :: i = 0                !none       |counter
@@ -25,10 +25,8 @@
       imax = 0
       
     !!read data for surface elements in the floodplain-for overbank flooding
-      inquire (file=in_link%chan_surf, exist=i_exist)
-      if (i_exist .or. in_link%chan_surf /= "null") then
+      if (open_file(107, in_link%chan_surf)) then
       do
-        open (107,file=in_link%chan_surf)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mcha_sp

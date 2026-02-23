@@ -2,7 +2,9 @@
       
       use maximum_data_module
       use mgt_operations_module
-      
+      use input_file_module
+      use utils, only: open_file
+
       implicit none 
 
       integer :: ic = 0               !none       |counter
@@ -15,12 +17,8 @@
       eof = 0
       imax = 0
 
-      inquire (file="puddle.ops", exist=i_exist)
-      if (.not. i_exist .or. "puddle.ops" == " null") then
-        allocate (pudl_db(0:0))
-      else
+      if (open_file(104, in_ops%puddle_ops)) then
       do
-        open (104,file="puddle.ops")
         read (104,*,iostat=eof) titldum
         if (eof < 0) exit
         read (104,*,iostat=eof) header
@@ -45,6 +43,8 @@
         
         exit
       enddo
+      else
+        allocate (pudl_db(0:0))
       endif
 
       db_mx%pudl_db = imax

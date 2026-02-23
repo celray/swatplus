@@ -11,7 +11,9 @@
       use time_module
       use basin_module
       use septic_data_module
-      
+      use input_file_module, only: in_sol
+      use utils, only: open_file
+
       implicit none  
       
       external :: soil_phys_init, soils_test_adjust, layersplit
@@ -46,28 +48,30 @@
       real :: sum_ec = 0.         !              |temporary sum to do weighted average with 
       real :: sum_cal = 0.        !              |temporary sum to do weighted average with 
       real :: sum_ph = 0.         !              |temporary sum to do weighted average with   
-      logical :: i_exist          !none          |check to determine if a file exists
       character (len=500) :: header = "" !       |header of file
       character (len=80) :: titldum = "" !       |title of file
       character (len=16) :: units = ""  !        |name
       logical :: first_layer_flag !              |True if first non 10 mm layer.
+      logical :: has_custom_depths !           |True if soil_lyr_depths.sol exists
       type (soil_database), dimension(:), allocatable :: sol_mm_db
-      
+
       !!Section 1
       !!this section sets, allocates, and initializes the original soil database
       msoils = Max(0,db_mx%soil)
       allocate (sol(0:msoils))
-       
+
+      !! check once whether custom soil layer depths file exists
+      has_custom_depths = open_file(107, in_sol%lyr_depths)
+
       do isol = 1, msoils
         sol(isol)%s%snam = soildb(isol)%s%snam
         sol(isol)%s%hydgrp = soildb(isol)%s%hydgrp
-        sol(isol)%s%zmx = soildb(isol)%s%zmx                      
+        sol(isol)%s%zmx = soildb(isol)%s%zmx
         sol(isol)%s%anion_excl = soildb(isol)%s%anion_excl
-        sol(isol)%s%crk = soildb(isol)%s%crk                  
+        sol(isol)%s%crk = soildb(isol)%s%crk
         sol(isol)%s%texture = soildb(isol)%s%texture
 
-        inquire (file="soil_lyr_depths.sol",exist=i_exist)
-        if (.not. i_exist) then
+        if (.not. has_custom_depths) then
           if (soildb(isol)%ly(1)%z > 19.5) then
             sol(isol)%s%nly = soildb(isol)%s%nly + 1    !add 10 mm layer
           else
@@ -129,7 +133,8 @@
               sol(isol)%ly(j)%ph = soildb(isol)%ly(j)%ph
             end do
           end if
-        else              !this part reads in custom depths and calculates the weighted average values 
+        else              !this part reads in custom depths and calculates the weighted average values
+          rewind (107)
 
           ! Allocate a temporary data structure to do weighted averages from.
           tot_soil_depth = soildb(isol)%ly(soildb(isol)%s%nly)%z
@@ -163,7 +168,6 @@
             prev_depth = soildb(isol)%ly(j)%z               
           end do
 
-          open (107,file="soil_lyr_depths.sol")
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -274,13 +278,14 @@
           end do
           deallocate (sol_mm_db(1)%ly)
           deallocate (sol_mm_db)
-          close (107)
         end if
 
         if (allocated(sol_test)) then
           call soils_test_adjust(isol, mlyr)
         endif
       end do
+
+      if (has_custom_depths) close (107)
            
       do isol = 1, msoils
         call soil_phys_init(isol)          !! initialize soil physical parameters

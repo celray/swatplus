@@ -74,7 +74,7 @@
       !! write new file.cio
       open (107,file="SWIFT/file_cio.swf",recl = 1500)
       write (107, *) "SWIFT file.cio"
-      write (107, *) "BASIN         ", in_sim%object_cnt, in_sim%object_prt, in_sim%cs_db
+      write (107, *) "BASIN         ", in_sim%object_cnt, in_sim%object_prt, in_constit%cs_db
       write (107, *) "CLIMATE       ", "  precip.swf"
       write (107, *) "CONNECT       ", in_con%hru_con, in_con%ru_con, in_con%aqu_con, in_con%chandeg_con,  &
                                           in_con%res_con, in_con%rec_con, in_con%out_con 
@@ -89,8 +89,8 @@
       close (107)
       
       ! Create a list of SWAT input files to copy to the SWIFT folder
-      file_list = [in_sim%object_cnt, in_sim%object_prt,          & 
-          in_sim%cs_db, in_con%hru_con, in_con%ru_con, in_con%aqu_con, in_con%chandeg_con,  &
+      file_list = [in_sim%object_cnt, in_sim%object_prt,          &
+          in_constit%cs_db, in_con%hru_con, in_con%ru_con, in_con%aqu_con, in_con%chandeg_con,  &
           in_con%res_con, in_con%rec_con, in_con%out_con, in_ru%ru_def, in_ru%ru_ele,       &
           in_regs%def_lsu, in_regs%ele_lsu]
       

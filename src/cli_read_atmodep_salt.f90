@@ -8,7 +8,8 @@
       use time_module
       use maximum_data_module
       use constituent_mass_module
-      
+      use utils, only: open_file
+
       implicit none
       
       character (len=4) :: salt_ion = ""!           |
@@ -25,12 +26,8 @@
       !only proceed if there are salt ions in the simulation
       if(cs_db%num_salts > 0) then
       
-      inquire (file='salt_atmo.cli',exist=i_exist)
-      if(i_exist) then
+      if (open_file(5050, in_cli%atmo_salt)) then
         salt_atmo = "y"
-        
-        !open the file; skip first two lines (commentary)
-        open(5050,file='salt_atmo.cli')
         read(5050,*)
         read(5050,*)
         read(5050,*)

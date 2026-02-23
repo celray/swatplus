@@ -1,34 +1,30 @@
       subroutine dtbl_flocon_read
-      
+
       use maximum_data_module
       use hydrograph_module
       use input_file_module
       use conditional_module
-      
+      use utils, only: open_file
+
       implicit none
-                  
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      integer :: i = 0                !none       |counter 
+      integer :: i = 0                !none       |counter
       integer :: mdtbl = 0            !none       |ending of loop
-      integer :: ic = 0               !none       |counter 
-      integer :: ial = 0              !none       |counter 
-      integer :: iac = 0              !none       !counter 
-      logical :: i_exist              !none       |check to determine if file exists
+      integer :: ic = 0               !none       |counter
+      integer :: ial = 0              !none       |counter
+      integer :: iac = 0              !none       !counter
       integer :: idb = 0              !none       |counter
       integer :: iob = 0              !none       |counter
 
       mdtbl = 0
       eof = 0
-      
+
       !! read all data from hydrol.dat
-      inquire (file=in_cond%dtbl_flo, exist=i_exist)
-      if (.not. i_exist .or. in_cond%dtbl_flo == "null") then
-        allocate (dtbl_flo(0:0))
-      else
+      if (open_file(107, in_cond%dtbl_flo)) then
         do
-          open (107,file=in_cond%dtbl_flo)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) mdtbl
@@ -49,7 +45,7 @@
             allocate (dtbl_flo(i)%act_typ(dtbl_flo(i)%acts), source = 0)
             allocate (dtbl_flo(i)%act_app(dtbl_flo(i)%acts), source = 0)
             allocate (dtbl_flo(i)%act_outcomes(dtbl_flo(i)%acts,dtbl_flo(i)%alts))
-            
+
             !read conditions and condition alternatives
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -57,14 +53,14 @@
               read (107,*,iostat=eof) dtbl_flo(i)%cond(ic), (dtbl_flo(i)%alt(ic,ial), ial = 1, dtbl_flo(i)%alts)
               if (eof < 0) exit
             end do
-                        
+
             !read actions and action outcomes
             read (107,*,iostat=eof) header
             if (eof < 0) exit
             do iac = 1, dtbl_flo(i)%acts
               read (107,*,iostat=eof) dtbl_flo(i)%act(iac), (dtbl_flo(i)%act_outcomes(iac,ial), ial = 1, dtbl_flo(i)%alts)
               if (eof < 0) exit
-              
+
               !! if divert action, xwalk fp with flo_con decision table
               if (dtbl_flo(i)%act(iac)%typ == "divert" .and. dtbl_flo(i)%act(iac)%option == "recall") then
                 do idb = 1, db_mx%recall_max
@@ -74,7 +70,7 @@
                   end if
                 end do
               end if
-                
+
             end do
             read (107,*,iostat=eof)
             if (eof < 0) exit
@@ -83,8 +79,11 @@
           db_mx%dtbl_flo = mdtbl
           exit
         enddo
+        close (107)
+      else
+        allocate (dtbl_flo(0:0))
       endif
-      
+
       !cross walk dtbl name with connect file ruleset
       do iob = 1, sp_ob%objs
         if (ob(iob)%ruleset /= "null") then
@@ -96,8 +95,6 @@
           end do
         end if
       end do
-      
-      close (107)
-      
-      return  
+
+      return
       end subroutine dtbl_flocon_read

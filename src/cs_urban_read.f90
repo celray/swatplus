@@ -4,7 +4,9 @@
       use urban_data_module
       use constituent_mass_module
       use cs_module
-      
+      use input_file_module
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: titldum = ""!           |title of file
@@ -21,11 +23,7 @@
       !only proceed if there are constituents in the simulation
       if(cs_db%num_cs > 0) then
       
-      inquire (file='cs_urban',exist=i_exist)
-      if(i_exist) then
-      
-        !open file and read first two header lines
-        open(5054,file='cs_urban')
+      if (open_file(5054, in_constit%urban_cs)) then
         read(5054,*) header
         read(5054,*) header
       

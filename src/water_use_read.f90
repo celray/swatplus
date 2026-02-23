@@ -7,7 +7,8 @@
       use hydrograph_module
       use constituent_mass_module
       use sd_channel_module
-      
+      use utils, only: open_file
+
       implicit none 
       
       character (len=80) :: titldum = ""!         |title of file
@@ -24,12 +25,8 @@
       
       !! read water allocation inputs
 
-      inquire (file='water_use.wal', exist=i_exist)
-      if (.not. i_exist .or. 'water_use.wal' == "null") then
-        allocate (wuse(0:0))
-      else
-      do 
-        open (107,file='water_use.wal')
+      if (open_file(107, in_wal%water_use)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) imax
@@ -72,6 +69,8 @@
           
         exit
       end do
+      else
+        allocate (wuse(0:0))
       end if
       close(107)
 

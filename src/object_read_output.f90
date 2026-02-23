@@ -1,31 +1,27 @@
       subroutine object_read_output
-      
+
       use input_file_module
       use hydrograph_module
       use maximum_data_module
-        
+      use utils, only: open_file
+
       implicit none
-       
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !none       |counter
       integer :: ii = 0               !none       !counter
       integer :: k = 0                !           |
       integer :: iunit = 0
-      
+
       mobj_out = 0
-      imax = 0      
-      
+      imax = 0
+
       !! read old saveconc properties
-      inquire (file=in_sim%object_prt,exist=i_exist)
-      if (.not. i_exist .or. in_sim%object_prt == "null") then         
-        allocate (ob_out(0:0))
-      else
+      if (open_file(107, in_sim%object_prt)) then
       do
-        open (107,file=in_sim%object_prt)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -36,7 +32,7 @@
             imax = Max(imax,i)
             mobj_out = mobj_out + 1
           end do
-          
+
         db_mx%object_prt = mobj_out
         allocate (ob_out(0:imax))
         rewind (107)
@@ -52,7 +48,7 @@
           read (107,*,iostat=eof) k, ob_out(ii)%obtyp,                    &
              ob_out(ii)%obtypno, ob_out(ii)%hydtyp, ob_out(ii)%filename
           if (eof < 0) exit
-          
+
           select case (ob_out(i)%obtyp)
             case ("hru")   !hru
               ob_out(i)%objno = sp_ob1%hru + ob_out(i)%obtypno - 1
@@ -74,31 +70,31 @@
             case ("sdc")   !swat-deg channel
               ob_out(i)%objno = sp_ob1%chandeg + ob_out(i)%obtypno - 1
           end select
-      
+
           select case (ob_out(i)%hydtyp)
             case ("tot")   !total flow
                ob_out(i)%hydno = 1
             case ("rhg")   !recharge
-               ob_out(i)%hydno = 2              
+               ob_out(i)%hydno = 2
             case ("sur")   !surface
-               ob_out(i)%hydno = 3 
+               ob_out(i)%hydno = 3
             case ("lat")   !lateral
                ob_out(i)%hydno = 4
             case ("til")   !tile
-               ob_out(i)%hydno = 5 
-            case ("sol_water")  !soil moisture by layer 
-               ob_out(i)%hydno = 6 
-            case ("solnut_ly")  !soil n and p by layer 
+               ob_out(i)%hydno = 5
+            case ("sol_water")  !soil moisture by layer
+               ob_out(i)%hydno = 6
+            case ("solnut_ly")  !soil n and p by layer
                ob_out(i)%hydno = 7
-            case ("solnut_pr")  !soil n and p for profile 
+            case ("solnut_pr")  !soil n and p for profile
                ob_out(i)%hydno = 8
-            case ("plant")  !plants status  
+            case ("plant")  !plants status
                ob_out(i)%hydno = 9
-            case ("cha_fp")  !channel and flood plain water balance  
+            case ("cha_fp")  !channel and flood plain water balance
                ob_out(i)%hydno = 10
             end select
          iunit = ob_out(i)%unitno
-         
+
          !! open file and write header
          open (iunit+i,file = ob_out(i)%filename,recl=2000)
          !write (iunit+i,*) "OBJECT.PRT                ", ob_out(i)%filename
@@ -114,14 +110,15 @@
          case (10)
            write (iunit+i,*) hyd_hdr_time, fp_hdr
          end select
-         
-        end do  ! mobj_out  
+
+        end do  ! mobj_out
         exit
       end do
-      end if
-        
       close (107)
-      
+      else
+        allocate (ob_out(0:0))
+      end if
+
       return
-      
+
       end subroutine object_read_output

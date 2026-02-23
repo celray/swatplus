@@ -10,7 +10,8 @@
       use pesticide_data_module
       use res_salt_module
       use res_cs_module
-      
+      use utils, only: open_file
+
       implicit none
 
       
@@ -21,7 +22,6 @@
       character (len=80) :: header = ""  !           |header of file
       integer :: eof = 0                 !           |end of file
       integer :: imax = 0                !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist                 !none       |check to determine if file exists
       integer :: i = 0                   !none       |counter
       integer :: ires = 0                !none       |counter 
       integer :: k = 0                   !none       |counter 
@@ -31,13 +31,8 @@
             
       !read wetland.wet
       imax = 0
-      inquire (file=in_res%wet, exist=i_exist)
-      if (.not. i_exist .or. in_res%wet == "null") then
-        allocate (wet_dat_c(0:0))
-        allocate (wet_dat(0:0))
-      else   
+      if (open_file(105, in_res%wet)) then
         do
-          open (105,file=in_res%wet)
           read (105,*,iostat=eof) titldum
           if (eof < 0) exit
           read (105,*,iostat=eof) header
@@ -72,6 +67,9 @@
          close (105)
          exit
        end do
+      else
+        allocate (wet_dat_c(0:0))
+        allocate (wet_dat(0:0))
       end if
       
       return

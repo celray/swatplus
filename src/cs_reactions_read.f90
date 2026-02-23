@@ -4,7 +4,9 @@
       use hydrograph_module, only: sp_ob
       use constituent_mass_module
       use cs_data_module
-      
+      use input_file_module
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: titldum = ""
@@ -27,11 +29,7 @@
       eof = 0
       
       !read cs reaction data
-      inquire (file="cs_reactions", exist=i_exist)
-      if(i_exist) then
-        
-        !open the file
-        open(107,file="cs_reactions")
+      if (open_file(107, in_constit%reactions_cs)) then
         read(107,*,iostat=eof) titldum
         
         !allocate arrays

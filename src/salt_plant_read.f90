@@ -4,22 +4,18 @@
       use input_file_module
       use maximum_data_module
       use salt_data_module
-      
+      use utils, only: open_file
+
       implicit none
  
       character (len=80) :: titldum = ""
       character (len=80) :: header = ""
       character (len=12) :: plant_name = ""
       integer :: iplant = 0
-      logical :: i_exist              !none       |check to determine if file exists
 
 
       !read plant salt tolerance data
-      inquire (file="salt_plants", exist=i_exist)
-      if (i_exist) then
-        
-        !open the file and read first line
-        open(107,file="salt_plants")
+      if (open_file(107, in_salt%plants_slt)) then
         read(107,*) titldum
         
         !read TDS-->EC conversion factor

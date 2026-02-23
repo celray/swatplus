@@ -1,5 +1,5 @@
       subroutine dtbl_lum_read
-      
+
       use maximum_data_module
       use reservoir_data_module
       use landuse_data_module
@@ -13,32 +13,28 @@
       use constituent_mass_module
       use hydrograph_module, only : sp_ob
       use hru_module, only : hru
-      
+      use utils, only: open_file
+
       implicit none
-                  
+
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
-      integer :: i = 0                !none       |counter 
+      integer :: i = 0                !none       |counter
       integer :: mdtbl = 0            !none       |ending of loop
-      integer :: ic = 0               !none       |counter 
-      integer :: ial = 0              !none       |counter 
-      integer :: iac = 0              !none       !counter 
-      logical :: i_exist              !none       |check to determine if file exists
+      integer :: ic = 0               !none       |counter
+      integer :: ial = 0              !none       |counter
+      integer :: iac = 0              !none       !counter
       integer :: idb = 0              !none       |counter
       integer :: iburn = 0            !none       |counter
       integer :: ihru = 0             !none       |counter
-      
+
       mdtbl = 0
       eof = 0
-      
+
       !! read all data from hydrol.dat
-      inquire (file=in_cond%dtbl_lum, exist=i_exist)
-      if (.not. i_exist .or. in_cond%dtbl_lum == "null") then
-        allocate (dtbl_lum(0:0))
-      else
+      if (open_file(107, in_cond%dtbl_lum)) then
         do
-          open (107,file=in_cond%dtbl_lum)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) mdtbl
@@ -60,7 +56,7 @@
             allocate (dtbl_lum(i)%act_typ(dtbl_lum(i)%acts), source = 0)
             allocate (dtbl_lum(i)%act_app(dtbl_lum(i)%acts), source = 0)
             allocate (dtbl_lum(i)%act_outcomes(dtbl_lum(i)%acts,dtbl_lum(i)%alts))
-            
+
             !read conditions and condition alternatives
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -72,7 +68,7 @@
                 read (107,*,iostat=eof) dtbl_lum(i)%cond(ic)%var, dtbl_lum(i)%frac_app
               end if
             end do
-            
+
             !if land_use conditional variable, determine number of hru's and areas (used for probabilistic operations)
             dtbl_lum(i)%hru_lu = 0
             dtbl_lum(i)%ha_lu = 0.
@@ -86,7 +82,7 @@
                 end do
               end if
             end do      ! ic
-                        
+
             !read actions and action outcomes
             read (107,*,iostat=eof) header
             if (eof < 0) exit
@@ -99,7 +95,7 @@
             !cross walk characters to get array numbers
             do iac = 1, dtbl_lum(i)%acts
                 select case (dtbl_lum(i)%act(iac)%typ)
-                                     
+
                 case ("plant")
                   !xwalk file pointer transplant data base
                   do idb = 1, db_mx%transplant
@@ -108,7 +104,7 @@
                       exit
                     endif
                   end do
-                       
+
                 case ("harvest")
                   do idb = 1, db_mx%harvop_db
                     if (dtbl_lum(i)%act(iac)%file_pointer == harvop_db(idb)%name) then
@@ -116,7 +112,7 @@
                       exit
                     end if
                   end do
-                    
+
                   case ("harvest_kill")
                   do idb = 1, db_mx%harvop_db
                     if (dtbl_lum(i)%act(iac)%file_pointer == harvop_db(idb)%name) then
@@ -124,7 +120,7 @@
                       exit
                     endif
                   end do
-                
+
                   case ("till")
                   do idb = 1, db_mx%tillparm
                     if (dtbl_lum(i)%act(iac)%option == tilldb(idb)%tillnm) then
@@ -132,7 +128,7 @@
                       exit
                     endif
                   end do
-                
+
                 case ("irr_demand")
                   do idb = 1, db_mx%irrop_db
                     if (dtbl_lum(i)%act(iac)%option == irrop_db(idb)%name) then
@@ -140,7 +136,7 @@
                       exit
                     end if
                   end do
-                       
+
                 case ("irrigate")
                   do idb = 1, db_mx%irrop_db
                     if (dtbl_lum(i)%act(iac)%option == irrop_db(idb)%name) then
@@ -148,7 +144,7 @@
                       exit
                     end if
                   end do
-                  
+
                 case ("fertilize")
                   !xwalk fert name with fertilizer data base
                   do idb = 1, db_mx%fertparm
@@ -164,7 +160,7 @@
                       exit
                     endif
                   end do
-                          
+
                 case ("fert_future")
                   !xwalk fert name with fertilizer data base
                   do idb = 1, db_mx%fertparm
@@ -180,7 +176,7 @@
                       exit
                     endif
                   end do
-                            
+
                 case ("manure_demand")
                   !fert name with manure allocation source object
                   !xwalk application type with chemical application data base
@@ -190,7 +186,7 @@
                       exit
                     endif
                   end do
-                                      
+
                 case ("pest_apply")
                   !xwalk fert name with fertilizer data base
                   do idb = 1, cs_db%num_pests
@@ -206,7 +202,7 @@
                       exit
                     endif
                   end do
-                                                             
+
                 case ("graze")
                   !xwalk graze name with grazing data base (graze.ops)
                   do idb = 1, db_mx%grazeop_db
@@ -214,7 +210,7 @@
                       dtbl_lum(i)%act_typ(iac) = idb
                     end if
                   end do
-                  
+
                 case ("puddle")
                   do idb = 1, db_mx%pudl_db
                     if (dtbl_lum(i)%act(iac)%option == pudl_db(idb)%name) then
@@ -222,7 +218,7 @@
                       exit
                     end if
                   end do
-                  
+
                 case ("burn")
                   do iburn = 1, db_mx%fireop_db
                     if (dtbl_lum(i)%act(iac)%option == fire_db(iburn)%name) then
@@ -231,24 +227,25 @@
                     end if
                   end do
                 end select
-                
+
                 !xwalk conditions and actions for days since last action
                 do ic = 1, dtbl_lum(i)%conds
                   if (dtbl_lum(i)%cond(ic)%lim_var == dtbl_lum(i)%act(iac)%name) then
                     dtbl_lum(i)%con_act(ic) = iac
                   end if
                 end do      ! ic
-                
+
             end do      ! iac
-            
+
           end do        ! mdtbl
-          
+
           db_mx%dtbl_lum = mdtbl
           exit
         end do
+        close (107)
+      else
+        allocate (dtbl_lum(0:0))
       end if
-      
-      close (107)
 
-      return  
+      return
       end subroutine dtbl_lum_read

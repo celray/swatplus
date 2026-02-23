@@ -10,6 +10,7 @@
       use constituent_mass_module
       use salt_module !rtb salt
       use cs_module !rtb cs
+      use utils, only: open_file
       
       implicit none
       
@@ -18,7 +19,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !           |
       integer :: max                  !           |
       integer :: k = 0                !           |
@@ -31,12 +31,8 @@
       eof = 0
       imax = 0
       
-      inquire (file=in_ru%ru, exist=i_exist)
-      if (.not. i_exist .or. in_ru%ru == "null") then
-          allocate (ru(0:0))
-      else
+      if (open_file(107, in_ru%ru, required=.true.)) then
       do
-        open (107,file=in_ru%ru)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -255,7 +251,9 @@
       close(107)
       exit
       end do
-      end if      
+      else
+          allocate (ru(0:0))
+      end if
 
       return
       end subroutine ru_read

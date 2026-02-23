@@ -6,26 +6,22 @@
       use reservoir_data_module
       use output_landscape_module
       use gwflow_module, only : in_wet_cell,wet_thick,gw_wet_flag,out_gw !rtb
-      
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: ires = 0             !none       |counter 
+      integer :: ires = 0             !none       |counter
       integer :: dum1 = 0             !none       |
 
       eof = 0
       imax = 0
 
-      inquire (file=in_res%hyd_wet, exist=i_exist)
-      if (.not. i_exist .or. in_res%hyd_wet == "null") then
-        allocate (wet_hyddb(0:0))
-      else   
+      if (open_file(105, in_res%hyd_wet)) then
       do
-       open (105,file=in_res%hyd_wet)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -62,14 +58,14 @@
        close (105)
       exit
       enddo
+      else
+        allocate (wet_hyddb(0:0))
       endif
-  
+
       !rtb: if gwflow, then read wetland bottom sediment thickness from gwflow.wetland
       if (bsn_cc%gwflow == 1 .and. gw_wet_flag == 1) then
-        inquire(file='gwflow.wetland',exist=i_exist)
-        if(i_exist) then
+        if(open_file(in_wet_cell, in_gwf%wetland)) then
           write(out_gw,*) '          found gwflow.wetland; use wetland specified bed thickness'
-          open(in_wet_cell,file='gwflow.wetland')
           read(in_wet_cell,*) header
           read(in_wet_cell,*) header
           read(in_wet_cell,*) header

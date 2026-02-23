@@ -7,21 +7,19 @@
       use input_file_module
       use maximum_data_module
       use salt_module
-      
+      use utils, only: open_file
+
       implicit none
  
       character (len=80) :: titldum = ""
       character (len=80) :: header = ""
       integer :: isalti = 0
       integer :: eof = 0
-      logical :: i_exist              !none       |check to determine if file exists
 
       eof = 0
       
       !read salt fertilizer loading (kg/ha)
-      inquire (file="salt_fertilizer.frt", exist=i_exist)
-      if (i_exist) then
-        open (107,file="salt_fertilizer.frt")
+      if (open_file(107, in_salt%fert_slt)) then
         read (107,*,iostat=eof) titldum
         read (107,*,iostat=eof) header
         

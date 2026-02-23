@@ -5,14 +5,14 @@
       use calibration_data_module
       use hydrograph_module
       use sd_channel_module
-      
+      use utils, only: open_file
+
       implicit none
 
       character (len=80) :: titldum = "" !          |title of file
       character (len=80) :: header = ""  !          |header of file
       integer :: eof = 0               !          |end of file
       integer :: ihru = 0              !          |number of hrus
-      logical :: i_exist               !          |check to determine if file exists
       integer :: imax = 0              !          |determine max number for array (imax) and total number in file
       integer :: mcal = 0              !units     |description
       integer :: mreg = 0              !units     |description
@@ -27,17 +27,13 @@
       integer :: iord_mx = 0           !ending of loop
       integer :: iord = 0              !none      |counter
       integer :: ich_s = 0             !none      |counter
-      
+
       imax = 0
       mcal = 0
       mreg = 0
- 
-      inquire (file=in_chg%ch_sed_budget_sft, exist=i_exist)
-      if (.not. i_exist .or. in_chg%ch_sed_budget_sft == "null") then
-           allocate (chcal(0:0))
-      else 
+
+      if (open_file(107, in_chg%ch_sed_budget_sft)) then
       do
-        open (107,file=in_chg%ch_sed_budget_sft)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) mreg
@@ -144,7 +140,9 @@
       end do
       exit
          
-      end do    
+      end do
+      else
+           allocate (chcal(0:0))
       end if
         
       db_mx%ch_reg = mreg

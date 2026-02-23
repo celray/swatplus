@@ -5,24 +5,20 @@
       use maximum_data_module
       use channel_data_module
       use hydrograph_module
+      use utils, only: open_file
 
       implicit none
-      
+
       character (len=80) :: titldum = "" !          |title of file
       character (len=80) :: header = ""  !          |header of file
       integer :: eof = 0               !          |end of file
       integer :: imax = 0              !units     |description
-      logical :: i_exist               !          |check to determine if file exists
-      
+
       eof = 0
       imax = 0
-      
-      inquire (file=in_cha%temp, exist=i_exist)
-      if (.not. i_exist .or. in_cha%temp == "null") then
-        imax = 0    !allocate (w_temp(0:0))
-      else   
+
+      if (open_file(105, in_cha%temp)) then
       do
-       open (105,file=in_cha%temp)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -57,6 +53,8 @@
        close (105)
       exit
       enddo
+      else
+        imax = 0    !allocate (w_temp(0:0))
       endif
 
       return  

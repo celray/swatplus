@@ -6,14 +6,14 @@
       use maximum_data_module
       use hydrograph_module
       use constituent_mass_module
-      
+      use utils, only: open_file
+
       implicit none 
       
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
 
       integer :: iom_osrc = 0
       
@@ -22,13 +22,8 @@
       
       !! read water allocation inputs
 
-      inquire (file='om_osrc.wal', exist=i_exist)
-      if (.not. i_exist .or. 'om_osrc.wal' == "null") then
-        allocate (osrc_om(0:0))
-        allocate (om_osrc_name(0:0))
-      else
-      do 
-        open (107,file='om_osrc.wal')
+      if (open_file(107, in_wal%om_osrc)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) imax
@@ -43,8 +38,11 @@
           read (107,*,iostat=eof) om_osrc_name(iom_osrc), osrc_om(iom_osrc)
         end do
       end do
+      else
+        allocate (osrc_om(0:0))
+        allocate (om_osrc_name(0:0))
       end if
-      
+
       close(107)
 
       return

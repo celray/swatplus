@@ -10,14 +10,14 @@
       use constituent_mass_module
       use recall_module
       use hru_module, only : hru
-      
+      use utils, only: open_file
+
       implicit none 
       
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !none       |counter
       integer :: k = 0                !none       |counter
       integer :: isrc = 0             !none       |counter
@@ -40,12 +40,8 @@
       
       !! read water allocation inputs
 
-      inquire (file=in_watrts%transfer_wro, exist=i_exist)
-      if (.not. i_exist .or. in_watrts%transfer_wro == "null") then
-        allocate (wallo(0:0))
-      else
-      do 
-        open (107,file=in_watrts%transfer_wro)
+      if (open_file(107, in_wal%wro)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) imax
@@ -238,6 +234,8 @@
 
         exit
       end do
+      else
+        allocate (wallo(0:0))
       end if
       close(107)
 

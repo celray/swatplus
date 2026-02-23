@@ -7,14 +7,14 @@
       use hydrograph_module
       use sd_channel_module
       use organic_mineral_mass_module
- 
+      use utils, only: open_file
+
       implicit none
       
       character (len=80) :: titldum = ""
       character (len=80) :: header = ""
       integer :: eof = 0
       integer :: imax = 0
-      logical :: i_exist
       integer :: ics = 0
       integer :: i = 0
       integer :: icsi = 0
@@ -22,10 +22,8 @@
       eof = 0
       
       !open and read file contents
-      inquire (file="cs_channel.ini", exist=i_exist)
-      if (i_exist .or. "cs_channel.ini" /= "null") then
+      if (open_file(107, in_constit%channel_cs)) then
         do
-          open (107,file="cs_channel.ini")
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -61,9 +59,7 @@
       end if
 
       !determine if daily channel concentrations and loads should be output
-      inquire (file="cs_streamobs", exist=i_exist)
-      if (cs_obs_file == 1) then
-        open(107,file='cs_streamobs')
+      if (cs_obs_file == 1 .and. open_file(107, in_constit%streamobs_cs)) then
         read(107,*)
         read(107,*) cs_str_nobs
         allocate (cs_str_obs(cs_str_nobs), source = 0)

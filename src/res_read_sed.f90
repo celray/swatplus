@@ -3,13 +3,14 @@
       use input_file_module
       use maximum_data_module
       use reservoir_data_module
+      use utils, only: open_file
 
 !!    ~ ~ ~ PURPOSE ~ ~ ~
 !!    this subroutine reads data from the lake water quality input file (.lwq).
 !!    This file contains data related to initial pesticide and nutrient levels
-!!    in the lake/reservoir and transformation processes occurring within the 
+!!    in the lake/reservoir and transformation processes occurring within the
 !!    lake/reservoir. Data in the lake water quality input file is assumed to
-!!    apply to all reservoirs in the watershed.   
+!!    apply to all reservoirs in the watershed.
 
       implicit none
 
@@ -17,18 +18,13 @@
       character (len=80) :: header = "" !             |header of file
       integer :: eof = 0                !             |end of file
       integer :: imax = 0               !             |determine max number for array (imax) and total number in file
-      logical :: i_exist                !none         |check to determine if file exists
       integer :: ires = 0               !none         |counter
-      
+
       eof = 0
       imax = 0
 
-      inquire (file=in_res%sed_res,exist=i_exist)
-      if (.not. i_exist .or. in_res%sed_res == "null") then
-        allocate (res_sed(0:0))
-      else
+      if (open_file(105, in_res%sed_res)) then
       do
-        open (105,file=in_res%sed_res)
         read (105,*,iostat=eof) titldum
         if (eof < 0) exit
         read (105,*,iostat=eof) header
@@ -57,6 +53,8 @@
         end do
         exit
       end do
+      else
+        allocate (res_sed(0:0))
       end if
       close(105)
 

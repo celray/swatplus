@@ -3,6 +3,7 @@
       use hydrograph_module
       use input_file_module
       use maximum_data_module
+      use utils, only: open_file
       
       implicit none
       
@@ -14,7 +15,6 @@
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
       integer :: nspu = 0             !           |
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: i = 0                !none       |counter
       integer :: isp = 0              !none       |counter
       integer :: numb = 0             !           |
@@ -26,13 +26,8 @@
       imax = 0
       
     !!read data for aquifer elements for 2-D groundwater model
-      inquire (file=in_link%aqu_cha, exist=i_exist)
-      if (.not. i_exist .or. in_link%aqu_cha == "null" ) then
-        allocate (aq_ch(0:0))
-      else 
+      if (open_file(107, in_link%aqu_cha, required=.true.)) then
       do
-        if (eof < 0) exit
-        open (107,file=in_link%aqu_cha)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -71,9 +66,11 @@
 
         end if
       end do
-      end if
 
       close (107)
-      
+      else
+        allocate (aq_ch(0:0))
+      end if
+
       return
       end subroutine aqu2d_read

@@ -4,6 +4,7 @@
        use aquifer_module
        use basin_module !rtb gwflow
        use maximum_data_module
+       use utils, only: open_file
        
        implicit none
       
@@ -13,8 +14,7 @@
        integer :: i = 0           !none            |counter
        integer :: imax = 0        !                |maximum count
        integer :: msh_aqp = 0     !none            |counter
-       logical :: i_exist         !                |check to determine if file exists
-       integer :: ish_aqp = 0     !none            |counter  
+       integer :: ish_aqp = 0     !none            |counter
        integer :: k = 0           !                |index
        
        msh_aqp = 0
@@ -22,12 +22,8 @@
        imax = 0
 
        !! read shallow aquifer property data from aquifer.aqu
-       inquire (file=in_aqu%aqu, exist=i_exist)
-       if (.not. i_exist .or. in_aqu%aqu == "null") then
-            allocate (aqudb(0:0))
-          else
+       if (open_file(107, in_aqu%aqu)) then
        do
-          open (107,file=in_aqu%aqu)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
@@ -61,6 +57,8 @@
           
           bsn_cc%gwflow = 0 ! rtb set gwflow module flag to 0
        enddo
+       else
+            allocate (aqudb(0:0))
        endif
           
        return

@@ -4,16 +4,17 @@
       use climate_module
       use maximum_data_module
       use time_module
+      use utils, only: open_file
       
       implicit none
       
       character (len=80) :: titldum = ""!           |title of file
       character (len=80) :: header = "" !           |header of file
+      character (len=256) :: cli_file = ""!         |station file with path prefix
       integer :: eof = 0              !           |end of file
       integer :: i = 0                !none       |counter  
       integer :: imax = 0             !none       |ending of loop
       integer :: iyr = 0              !none       |number of years 
-      logical :: i_exist              !none       |check to determine if file exists
       integer :: istep = 0            !           |
       integer :: iyr_prev = 0          !none      |previous year
       integer :: iyrs = 0             !           |
@@ -22,13 +23,15 @@
        imax = 0
 
       !! read all measured daily wind data
-      inquire (file=in_cli%wnd_cli, exist=i_exist)
-      if (.not. i_exist .or. in_cli%wnd_cli == "null") then
-         allocate (wnd(0:0))
-         allocate (wnd_n(0))
+      !! prepend wnd_path to station file if set
+      if (trim(in_cli%wnd_cli) == "null" .or. len_trim(in_cli%wnd_cli) == 0  &
+          .or. trim(in_path_wnd%wnd) == "null" .or. len_trim(in_path_wnd%wnd) == 0) then
+        cli_file = in_cli%wnd_cli
       else
-      do 
-        open (107,file=in_cli%wnd_cli)
+        cli_file = TRIM(ADJUSTL(in_path_wnd%wnd))//TRIM(in_cli%wnd_cli)
+      end if
+      if (open_file(107, cli_file)) then
+      do
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -131,7 +134,10 @@
       close (107)
       exit
       end do
-      endif
+      else
+        allocate (wnd(0:0))
+        allocate (wnd_n(0))
+      end if
              
        db_mx%wndfiles = imax
        

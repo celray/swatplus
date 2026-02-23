@@ -14,14 +14,14 @@
       use pesticide_data_module
       use pathogen_data_module
       use water_body_module
+      use utils, only: open_file
 
       implicit none
-      
+
       character (len=80) :: titldum = ""  !          |title of file
       character (len=80) :: header = "" !          |header of file
       integer :: eof = 0                !          |end of file
       integer :: imax = 0               !units     |description
-      logical :: i_exist                !          |check to determine if file exists
       integer :: ichi = 0               !none      |counter
       integer :: isp_ini = 0            !          |counter
       integer :: ics = 0                !none      |counter
@@ -186,12 +186,8 @@
         end do
       end if
 
-      inquire (file=in_cha%chan_ez, exist=i_exist)
-      if (.not. i_exist .or. in_cha%chan_ez == "null") then
-        allocate (sd_dat(0:0))
-      else   
+      if (open_file(105, in_cha%chan_ez)) then
       do
-       open (105,file=in_cha%chan_ez)
        read (105,*,iostat=eof) titldum
        if (eof < 0) exit
        read (105,*,iostat=eof) header
@@ -296,7 +292,8 @@
       close (105)
       exit
       end do
-      
+      else
+        allocate (sd_dat(0:0))
       end if
 
       return    

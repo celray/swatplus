@@ -3,9 +3,11 @@
       use water_allocation_module
       use maximum_data_module
       use recall_module
-      
+      use input_file_module, only: in_rec
+      use utils, only: open_file
+
       implicit none
-      
+
       character (len=80) :: titldum = ""
       character (len=80) :: header = ""
       integer :: eof = 0
@@ -13,13 +15,10 @@
       integer :: i = 0
       integer :: ii = 0
       integer :: k = 0
-      logical :: i_exist              !none       |check to determine if file exists
-      
+
       !read all recall files
-      inquire (file="recall_db.rec", exist=i_exist)
-      if (i_exist .or. "recall_db.rec" /= "null") then
+      if (open_file(107, in_rec%recall_db)) then
       do
-        open (107,file="recall_db.rec")
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -67,6 +66,7 @@
       use maximum_data_module
       use time_module
       use exco_module
+      use utils, only: open_file
       
       implicit none      
  
@@ -84,8 +84,7 @@
       integer :: mo = 0               !           |
       integer :: day_mo = 0           !           |
       integer :: eof = 0              !           |end of file
-      logical :: i_exist              !none       |check to determine if file exists
-      integer :: nbyr = 0             !none       !number of years the land use occurred 
+      integer :: nbyr = 0             !none       !number of years the land use occurred
       integer :: k = 0                !           |
       integer :: iyrs = 0             !           | 
       integer :: iyr_prev = 0         !none       |previous year
@@ -107,10 +106,8 @@
       idaystep = 0
 
       !read all recall files
-      inquire (file=in_rec%recall_rec, exist=i_exist)
-      if (i_exist .or. in_rec%recall_rec /= "null") then
+      if (open_file(107, in_rec%recall_rec, required=.true.)) then
       do
-        open (107,file=in_rec%recall_rec)
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header
@@ -263,10 +260,8 @@
       endif
       
       !read all rec_pest files
-      inquire (file="pest.com", exist=i_exist)
-      if (i_exist ) then
+      if (open_file(107, in_rec%pest_com)) then
       do
-        open (107,file="pest.com")
         read (107,*,iostat=eof) titldum
         if (eof < 0) exit
         read (107,*,iostat=eof) header

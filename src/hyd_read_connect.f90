@@ -12,6 +12,7 @@
       use climate_module
       use maximum_data_module
       use gwflow_module, only: nat_model
+      use utils, only: open_file
       
       implicit none
       
@@ -25,7 +26,6 @@
       character (len=80) :: header = "" !           |header of file
       integer :: eof = 0              !           |end of file
       integer :: imax = 0             !none       |determine max number for array (imax) and total number in file
-      logical :: i_exist              !none       |check to determine if file exists
       character (len=20) :: con_file  !           |
       character (len=8) :: obtyp      !           |
       integer :: isp = 0              !none       |counter
@@ -51,10 +51,8 @@
       aqu_found = 0
   
       !! read hru spatial data
-      inquire (file=con_file, exist=i_exist)
-      if (i_exist ) then
+      if (open_file(107, con_file)) then
         do
-          open (107,file=con_file)
           read (107,*,iostat=eof) titldum
           if (eof < 0) exit
           read (107,*,iostat=eof) header
