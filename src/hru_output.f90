@@ -29,7 +29,8 @@
       real :: sw_init = 0.
       real :: sno_init = 0.
       real :: percn_aa = 0.
-                         
+      type (output_nutcarb_gain_loss) :: hgl_out   !! temp for writing with -99 on non-wired fields
+
 !!    ~ ~ ~ PURPOSE ~ ~ ~
 !!    this subroutine outputs HRU variables on daily, monthly and annual time steps
 
@@ -40,7 +41,27 @@
           
         hwb_m(j) = hwb_m(j) + hwb_d(j)
         hnb_m(j) = hnb_m(j) + hnb_d(j)
-        hls_m(j) = hls_m(j) + hls_d(j) 
+        hls_m(j) = hls_m(j) + hls_d(j)
+        !! @celray march-2026 - populate hgl_d from existing daily outputs
+        hgl_d(j)%sedyld = hls_d(j)%sedyld
+        hgl_d(j)%usle = hls_d(j)%usle
+        hgl_d(j)%sedorgn = hls_d(j)%sedorgn
+        hgl_d(j)%sedorgp = hls_d(j)%sedorgp
+        hgl_d(j)%surqno3 = hls_d(j)%surqno3
+        hgl_d(j)%latno3 = hls_d(j)%latno3
+        hgl_d(j)%surqsolp = hls_d(j)%surqsolp
+        hgl_d(j)%sedmin = hls_d(j)%sedminp
+        hgl_d(j)%tileno3 = hls_d(j)%tileno3
+        hgl_d(j)%no3atmo = hnb_d(j)%no3atmo
+        hgl_d(j)%nh4atmo = hnb_d(j)%nh4atmo
+        hgl_d(j)%fertn = hnb_d(j)%fertn
+        hgl_d(j)%fertp = hnb_d(j)%fertp
+        hgl_d(j)%fixn = hnb_d(j)%fixn
+        hgl_d(j)%denit = hnb_d(j)%denit
+        hgl_d(j)%grazn_man = hnb_d(j)%grazn
+        hgl_d(j)%grazp_man = hnb_d(j)%grazp
+        hgl_d(j)%percn = hpw_d(j)%percn
+        hgl_m(j) = hgl_m(j) + hgl_d(j)
         bm_max_m = hpw_m(j)%bm_max     ! save off monthly bm_max value
         bm_max_y = hpw_y(j)%bm_max     ! save off yearly bm_max value
         bm_max_a = hpw_a(j)%bm_max     ! save off annual bm_max value
@@ -88,12 +109,24 @@
           end if
           if (pco%pw_hru%d == "y") then
             hpw_d(j)%bm_max = hpw_d(j)%bioms
-            write (2040,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_d(j),                  & 
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather day 
-              if (pco%csvout == "y") then 
+            write (2040,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_d(j),                  &
+                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather day
+              if (pco%csvout == "y") then
                 write (2044,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,           &
-                                                                hpw_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
-              end if 
+                                                                hpw_d(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
+              end if
+          end if
+          !! @celray march-2026 - nutcarb gain/loss daily print
+          if (pco%ls_hru%d == "y") then
+            hgl_out = hgl_d(j)
+            hgl_out%sedorgc = -99.; hgl_out%manurec = -99.; hgl_out%manuren = -99.
+            hgl_out%manurep = -99.; hgl_out%fertc = -99.; hgl_out%grazc_eat = -99.
+            hgl_out%grazn_eat = -99.; hgl_out%grazp_eat = -99.; hgl_out%grazc_man = -99.
+            hgl_out%yieldc = -99.; hgl_out%yieldn = -99.; hgl_out%yieldp = -99.
+            write (3341,109) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+            if (pco%csvout == "y") then
+                write (3342,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+            end if
           end if
         end if
          
@@ -103,6 +136,7 @@
           hwb_y(j) = hwb_y(j) + hwb_m(j)
           hnb_y(j) = hnb_y(j) + hnb_m(j)
           hls_y(j) = hls_y(j) + hls_m(j)
+          hgl_y(j) = hgl_y(j) + hgl_m(j)
           bm_max_y = hpw_y(j)%bm_max      ! save off yearly bm_max
           hpw_y(j) = hpw_y(j) + hpw_m(j)
           hpw_y(j)%bm_max = bm_max_y      ! restore yearly bm_max
@@ -149,10 +183,22 @@
              hpw_m(j)%pplnt = pl_mass(j)%tot_com%p
              write (2041,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_m(j),         &
                                                                           lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather mon
-               if (pco%csvout == "y") then 
+               if (pco%csvout == "y") then
                  write (2045,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name,  &
-                                                                hpw_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
-               end if 
+                                                                hpw_m(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
+               end if
+           end if
+           !! @celray march-2026 - nutcarb gain/loss monthly print
+           if (pco%ls_hru%m == "y") then
+             hgl_out = hgl_m(j)
+             hgl_out%sedorgc = -99.; hgl_out%manurec = -99.; hgl_out%manuren = -99.
+             hgl_out%manurep = -99.; hgl_out%fertc = -99.; hgl_out%grazc_eat = -99.
+             hgl_out%grazn_eat = -99.; hgl_out%grazp_eat = -99.; hgl_out%grazc_man = -99.
+             hgl_out%yieldc = -99.; hgl_out%yieldn = -99.; hgl_out%yieldp = -99.
+             write (3343,109) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+             if (pco%csvout == "y") then
+                 write (3344,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+             end if
            end if
            hpw_m(j)%bm_max = 0.0
           
@@ -164,6 +210,7 @@
           hnb_m(j) = hnbz
           hpw_m(j) = hpwz
           hls_m(j) = hlsz
+          hgl_m(j) = hgl_z
         end if
         
         !! check end of year
@@ -172,6 +219,7 @@
           hwb_a(j) = hwb_a(j) + hwb_y(j)
           hnb_a(j) = hnb_a(j) + hnb_y(j)
           hls_a(j) = hls_a(j) + hls_y(j)
+          hgl_a(j) = hgl_a(j) + hgl_y(j)
           hpw_a(j) = hpw_a(j) + hpw_y(j)         
           
           const = time%day_end_yr
@@ -219,14 +267,27 @@
              hpw_y(j)%nplnt = pl_mass(j)%tot_com%n
              hpw_y(j)%pplnt = pl_mass(j)%tot_com%p
              write (2042,101) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hpw_y(j),        &
-                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather yr             
-               if (pco%csvout == "y") then 
+                                                                          lum(ilu)%plant_cov, lum(ilu)%mgt_ops  !! plant weather yr
+               if (pco%csvout == "y") then
                  write (2046,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, &
-                                                                hpw_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops  
-               end if 
+                                                                hpw_y(j), lum(ilu)%plant_cov, lum(ilu)%mgt_ops
+               end if
+           end if
+           !! @celray march-2026 - nutcarb gain/loss yearly print
+           if (pco%ls_hru%y == "y") then
+             hgl_out = hgl_y(j)
+             hgl_out%sedorgc = -99.; hgl_out%manurec = -99.; hgl_out%manuren = -99.
+             hgl_out%manurep = -99.; hgl_out%fertc = -99.; hgl_out%grazc_eat = -99.
+             hgl_out%grazn_eat = -99.; hgl_out%grazp_eat = -99.; hgl_out%grazc_man = -99.
+             hgl_out%yieldc = -99.; hgl_out%yieldn = -99.; hgl_out%yieldp = -99.
+             write (3345,109) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+             if (pco%csvout == "y") then
+                 write (3346,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+             end if
            end if
           hpw_y(j)%bm_max = 0.0
-           
+          hgl_y(j) = hgl_z
+
           !reset yearly parameters in time_control - for calibration runs
         end if
         
@@ -283,7 +344,22 @@
              end if
              hls_a(j) = hlsz
          end if
-        
+
+         !! @celray march-2026 - nutcarb gain/loss average annual print
+         if (time%end_sim == 1 .and. pco%ls_hru%a == "y") then
+           hgl_a(j) = hgl_a(j) / time%yrs_prt
+           hgl_out = hgl_a(j)
+           hgl_out%sedorgc = -99.; hgl_out%manurec = -99.; hgl_out%manuren = -99.
+           hgl_out%manurep = -99.; hgl_out%fertc = -99.; hgl_out%grazc_eat = -99.
+           hgl_out%grazn_eat = -99.; hgl_out%grazp_eat = -99.; hgl_out%grazc_man = -99.
+           hgl_out%yieldc = -99.; hgl_out%yieldn = -99.; hgl_out%yieldp = -99.
+           write (3347,109) time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+             if (pco%csvout == "y") then
+               write (3348,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, j, ob(iob)%gis_id, ob(iob)%name, hgl_out
+             end if
+             hgl_a(j) = hgl_z
+         end if
+
          if (time%end_sim == 1 .and. pco%pw_hru%a == "y") then     
            hpw_a(j) = hpw_a(j) / time%yrs_prt
            hpw_a(j) = hpw_a(j) // time%days_prt
@@ -330,5 +406,6 @@
 104   format (4i6,2i8,2x,a8,4f12.3,15f17.3,7x,a16,a30)
 107   format (4i6,2i8,2x,a,12f12.3,3x,a16,a30,f12.3)
 108   format (4i6,2i8,2x,a,12(1x,f16.3),3x,a16,a30,1x,f16.3)
-       
+109   format (4i6,2i8,2x,a,30(1x,f16.3))
+
       end subroutine hru_output

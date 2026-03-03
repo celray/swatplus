@@ -178,6 +178,7 @@
         real :: yieldc = 0.             !kg C/ha        |amount of carbon removed in yield
         real :: yieldn = 0.             !kg N/ha        |amount of nitrogen removed in yield
         real :: yieldp = 0.             !kg P/ha        |amount of phosphorus removed in yield
+        real :: percn = 0.              !kg N/ha        |nitrate NO3-N leached from bottom of soil profile
       end type output_nutcarb_gain_loss
       type (output_nutcarb_gain_loss), dimension (:), allocatable :: hgl_d
       type (output_nutcarb_gain_loss), dimension (:), allocatable :: hgl_m
@@ -1460,7 +1461,8 @@
         character (len=17)  :: yieldc   =  "           yieldc"
         character (len=17)  :: yieldn   =  "           yieldn"
         character (len=17)  :: yieldp   =  "           yieldp"
-      end type output_losses_header1      
+        character (len=17)  :: percn    =  "            percn"
+      end type output_losses_header1
       type (output_losses_header1) :: ls_hdr1
       
        type output_losses_header_units1
@@ -1500,7 +1502,8 @@
         character (len=17)  :: yieldc   =  "             kgha"
         character (len=17)  :: yieldn   =  "             kgha"
         character (len=17)  :: yieldp   =  "             kgha"
-      end type output_losses_header_units1      
+        character (len=17)  :: percn    =  "             kgha"
+      end type output_losses_header_units1
       type (output_losses_header_units1) :: ls_hdr_units1   
      
       type output_plantweather_header
@@ -1801,6 +1804,7 @@
         hru3%yieldc = hru1%yieldc + hru2%yieldc
         hru3%yieldn = hru1%yieldn + hru2%yieldn
         hru3%yieldp = hru1%yieldp + hru2%yieldp
+        hru3%percn = hru1%percn + hru2%percn
       end function hruout_nut_gain_loss_add
     
       function hruout_nut_cycling_mult (hru1,const) result (hru2)
@@ -1850,6 +1854,7 @@
         hru2%yieldc = hru1%yieldc * const
         hru2%yieldn = hru1%yieldn * const
         hru2%yieldp = hru1%yieldp * const
+        hru2%percn = hru1%percn * const
       end function hruout_nut_gain_loss_mult
       
       function hruout_nut_cycling_div (hru1,const) result (hru2)
@@ -1899,6 +1904,7 @@
         hru2%yieldc = hru1%yieldc / const
         hru2%yieldn = hru1%yieldn / const
         hru2%yieldp = hru1%yieldp / const
+        hru2%percn = hru1%percn / const
       end function hruout_nut_gain_loss_div
       
       function hruout_plantweather_add (hru1, hru2) result (hru3)

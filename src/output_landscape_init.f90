@@ -706,62 +706,62 @@
                 
 !!!  HRU - New nutcarb gain loss file
         if (pco%ls_hru%d == "y") then
-          call open_output_file(3341, "hru_nut_carb_gl_day.txt", 1500)
+          call open_output_file(3341, "hru_nutcarb_gnls_day.txt", 1500)
           write (3341,*) bsn%name, prog
           write (3341,*) ls_hdr1    !! hru
           write (3341,*) ls_hdr_units1
-          write (9000,*) "HRU                       hru_nut_carb_gl_day.txt"
+          write (9000,*) "HRU                       hru_nutcarb_gnls_day.txt"
             if (pco%csvout == "y") then
-              call open_output_file(3342, "hru_nut_carb_gl_day.csv", 1500)
+              call open_output_file(3342, "hru_nutcarb_gnls_day.csv", 1500)
               write (3342,*) bsn%name, prog
               write (3342,'(*(G0.3,:,","))') ls_hdr1    !! hru
               write (3342,'(*(G0.3,:,","))') ls_hdr_units1
-              write (9000,*) "HRU                       hru_nut_carb_gl_day.csv"
+              write (9000,*) "HRU                       hru_nutcarb_gnls_day.csv"
             end if 
         endif
 
         if (pco%ls_hru%m == "y") then
-          call open_output_file(3343, "hru_nut_carb_gl_mon.txt", 1500)
+          call open_output_file(3343, "hru_nutcarb_gnls_mon.txt", 1500)
           write (3343,*) bsn%name, prog
           write (3343,*) ls_hdr1    !! hru
           write (3343,*) ls_hdr_units1
-          write (9000,*) "HRU                       hru_nut_carb_gl_mon.txt"
+          write (9000,*) "HRU                       hru_nutcarb_gnls_mon.txt"
             if (pco%csvout == "y") then
-              call open_output_file(3344, "hru_nut_carb_gl_mon.csv", 1500)
+              call open_output_file(3344, "hru_nutcarb_gnls_mon.csv", 1500)
               write (3344,*) bsn%name, prog
               write (3344,'(*(G0.3,:,","))') ls_hdr1    !! hru
               write (3344,'(*(G0.3,:,","))') ls_hdr_units1
-              write (9000,*) "HRU                       hru_nut_carb_gl_mon.csv"
+              write (9000,*) "HRU                       hru_nutcarb_gnls_mon.csv"
             end if 
         endif
         
         if (pco%ls_hru%y == "y") then
-          call open_output_file(3345, "hru_nut_carb_gl_yr.txt", 1500)
+          call open_output_file(3345, "hru_nutcarb_gnls_yr.txt", 1500)
           write (3345,*) bsn%name, prog
           write (3345,*) ls_hdr1    !! hru
           write (3345,*) ls_hdr_units1
-          write (9000,*) "HRU                       hru_nut_carb_gl_yr.txt"
+          write (9000,*) "HRU                       hru_nutcarb_gnls_yr.txt"
             if (pco%csvout == "y") then
-              call open_output_file(3346, "hru_nut_carb_gl_yr.csv", 1500)
+              call open_output_file(3346, "hru_nutcarb_gnls_yr.csv", 1500)
               write (3346,*) bsn%name, prog
               write (3346,'(*(G0.3,:,","))') ls_hdr1    !! hru
               write (3346,'(*(G0.3,:,","))') ls_hdr_units1
-              write (9000,*) "HRU                       hru_nut_carb_gl_yr.csv"
+              write (9000,*) "HRU                       hru_nutcarb_gnls_yr.csv"
             end if 
         endif
         
         if (pco%ls_hru%a == "y") then
-          call open_output_file(3347, "hru_nut_carb_gl_aa.txt", 1500)
+          call open_output_file(3347, "hru_nutcarb_gnls_aa.txt", 1500)
           write (3347,*) bsn%name, prog
           write (3347,*) ls_hdr1    !! hru
           write (3347,*) ls_hdr_units1
-          write (9000,*) "HRU                       hru_nut_carb_gl_aa.txt"
+          write (9000,*) "HRU                       hru_nutcarb_gnls_aa.txt"
             if (pco%csvout == "y") then
-              call open_output_file(3348, "hru_nut_carb_gl_aa.csv", 1500)
+              call open_output_file(3348, "hru_nutcarb_gnls_aa.csv", 1500)
               write (3348,*) bsn%name, prog
               write (3348,'(*(G0.3,:,","))') ls_hdr1    !! hru
               write (3348,'(*(G0.3,:,","))') ls_hdr_units1
-              write (9000,*) "HRU                       hru_nut_carb_gl_aa.csv"
+              write (9000,*) "HRU                       hru_nutcarb_gnls_aa.csv"
             end if 
         endif
 !!!  HRU - New nutcarb gain loss file       
