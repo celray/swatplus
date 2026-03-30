@@ -52,7 +52,7 @@
       use constituent_mass_module
       use output_ls_pesticide_module
       use water_body_module
-      !use water_allocation_module
+      use water_allocation_module
       !use reservoir_data_module
       
       implicit none
@@ -216,6 +216,13 @@
           !! initialize variables at beginning of day for hru's
           if (sp_ob%hru > 0) call sim_initday
 
+          !! initialize variables at beginning of day for water allocation
+          !! zero demand, withdrawal, and unmet for entire allocation object
+          wallo(:)%tot = walloz
+          !! zero water treatment and use outflow in case they receive water multiple times
+          wtp_om_out(:) = hz
+          wuse_om_out(:) = hz
+
           if (time%yrs > pco%nyskip) ndmo(time%mo) = ndmo(time%mo) + 1
 
           call climate_control      !! read in/generate weather
@@ -325,7 +332,7 @@
           end if
         
           !! compute biological mixing at the end of every year
-          if (bsn_cc%cswat /= 2) then                                       !! fg added this because so that cbn_zhang2 can handle bio mixing directly
+          if (bsn_cc%cswat /= 2 .and. bsn_cc%cswat /= 3) then  !! fg added this because so that cbn_zhang2 can handle bio mixing directlyn
             if (hru(j)%hyd%biomix > 1.e-6) call mgt_newtillmix (j, hru(j)%hyd%biomix, 0)
           end if
 
