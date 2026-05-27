@@ -25,7 +25,7 @@
             if (pco%textout == "y") then
               write (2520,100) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
               if (pco%csvout == "y") then
-                write (2524,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
+                write (2524,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_d(iaq)
               end if
             end if
 #ifdef SQLITE_ENABLED
@@ -47,7 +47,7 @@
             if (pco%textout == "y") then
               write (2521,100)  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
               if (pco%csvout == "y") then
-                write (2525,'(*(G0.3,:","))')  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
+                write (2525,'(*(G0.6,:","))')  time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_m(iaq)
               endif
             end if
 #ifdef SQLITE_ENABLED
@@ -69,7 +69,7 @@
             if (pco%textout == "y") then
               write (2522,102) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq)
               if (pco%csvout == "y") then
-                write (2526,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq) 
+                write (2526,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_y(iaq)
               end if
             end if
 #ifdef SQLITE_ENABLED
@@ -88,7 +88,7 @@
         if (pco%textout == "y") then
           write (2523,102) time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)
           if (pco%csvout == "y") then 
-            write (2527,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)  
+            write (2527,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, iaq, ob(iob)%gis_id, ob(iob)%name, aqu_a(iaq)
           end if 
         end if
 #ifdef SQLITE_ENABLED

@@ -32,7 +32,7 @@
           if (pco%textout == "y") then
             write (2480,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
             if (pco%csvout == "y") then
-              write (2484,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
+              write (2484,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_d(jrch)
             end if 
           end if
 #ifdef SQLITE_ENABLED
@@ -50,7 +50,7 @@
           if (pco%textout == "y") then
             write (2481,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
             if (pco%csvout == "y") then
-              write (2485,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
+              write (2485,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_m(jrch)
             end if
           end if
 #ifdef SQLITE_ENABLED
@@ -69,7 +69,7 @@
           if (pco%textout == "y") then
             write (2482,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
             if (pco%csvout == "y") then
-              write (2486,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
+              write (2486,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_y(jrch)
             end if
           end if
 #ifdef SQLITE_ENABLED
@@ -88,7 +88,7 @@
         if (pco%textout == "y") then
           write (2483,100) time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
           if (pco%csvout == "y") then
-            write (2487,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
+            write (2487,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, jrch, ob(iob)%gis_id, ob(iob)%name, ch_a(jrch)
           end if
         end if
 #ifdef SQLITE_ENABLED

@@ -33,7 +33,7 @@
               write (2090,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_d
             end if
             if (pco%csvout == "y") then
-              write (2094,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_d
+              write (2094,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_d
             end if
 #ifdef SQLITE_ENABLED
             if (pco%sqliteout == "y") then
@@ -55,7 +55,7 @@
               write (2091,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_m
             end if
             if (pco%csvout == "y") then
-              write (2095,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_m
+              write (2095,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_m
             endif
 #ifdef SQLITE_ENABLED
             if (pco%sqliteout == "y") then
@@ -77,7 +77,7 @@
               write (2092,102) time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_y
             end if
             if (pco%csvout == "y") then
-              write (2096,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_y 
+              write (2096,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_y 
             end if
 #ifdef SQLITE_ENABLED
             if (pco%sqliteout == "y") then
@@ -96,7 +96,7 @@
           write (2093,102) time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_a
         end if
         if (pco%csvout == "y") then 
-          write (2097,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_a 
+          write (2097,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "     1", bsn%name, baqu_a
         end if
 #ifdef SQLITE_ENABLED
         if (pco%sqliteout == "y") then

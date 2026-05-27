@@ -75,7 +75,7 @@
             if (pco%textout == "y") then
               write (2050,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_d  !! waterbal
               if (pco%csvout == "y") then 
-                write (2054,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_d  !! waterbal
+                write (2054,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_d  !! waterbal
               end if
             end if
 #ifdef SQLITE_ENABLED
@@ -90,7 +90,7 @@
             if (pco%textout == "y") then
               write (2060,104) time%day, time%mo, time%day_mo, time%yrc, "        1", "       1", bsn%name, bnb_d  !! nutrient bal
               if (pco%csvout == "y") then 
-                write (2064,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_d  !! nutrient bal
+                write (2064,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_d  !! nutrient bal
               end if
             end if
 #ifdef SQLITE_ENABLED
@@ -103,7 +103,7 @@
             if (pco%textout == "y") then
               write (2070,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_d  !! losses
               if (pco%csvout == "y") then 
-                write (2074,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_d  !! losses
+                write (2074,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_d  !! losses
               end if 
             end if
 #ifdef SQLITE_ENABLED
@@ -116,7 +116,7 @@
             if (pco%textout == "y") then
               write (2080,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_d  !! plant weather
               if (pco%csvout == "y") then 
-                write (2084,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_d  !! plant weather
+                write (2084,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_d  !! plant weather
               end if
             end if
 #ifdef SQLITE_ENABLED
@@ -143,7 +143,7 @@
             if (pco%textout == "y") then
               write (2051,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_m
               if (pco%csvout == "y") then 
-                write (2055,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_m
+                write (2055,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_m
               end if
             end if
 #ifdef SQLITE_ENABLED
@@ -158,7 +158,7 @@
             if (pco%textout == "y") then
               write (2061,104) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_m 
               if (pco%csvout == "y") then 
-                write (2065,104) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_m
+                write (2065,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_m
               end if 
             end if
 #ifdef SQLITE_ENABLED
@@ -171,7 +171,7 @@
             if (pco%textout == "y") then
               write (2071,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_m
               if (pco%csvout == "y") then 
-                write (2075,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_m
+                write (2075,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_m
               end if 
             end if
 #ifdef SQLITE_ENABLED
@@ -186,7 +186,7 @@
             if (pco%textout == "y") then
               write (2081,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_m
               if (pco%csvout == "y") then 
-                write (2085,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_m
+                write (2085,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_m
               end if 
             end if
 #ifdef SQLITE_ENABLED
@@ -223,7 +223,7 @@
              if (pco%textout == "y") then
                write (2052,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_y
                if (pco%csvout == "y") then 
-                 write (2056,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_y
+                 write (2056,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_y
                end if
              end if
 #ifdef SQLITE_ENABLED
@@ -238,7 +238,7 @@
              if (pco%textout == "y") then
                write (2062,104) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_y
                if (pco%csvout == "y") then 
-                 write (2066,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_y
+                 write (2066,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_y
                end if
              end if
 #ifdef SQLITE_ENABLED
@@ -251,7 +251,7 @@
              if (pco%textout == "y") then
                write (2072,100)time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_y
                if (pco%csvout == "y") then 
-                 write (2076,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_y
+                 write (2076,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_y
                end if 
              end if
 #ifdef SQLITE_ENABLED
@@ -266,7 +266,7 @@
              if (pco%textout == "y") then
                write (2082,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_y
                if (pco%csvout == "y") then 
-                 write (2086,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_y
+                 write (2086,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_y
                end if 
              end if
 #ifdef SQLITE_ENABLED
@@ -302,7 +302,7 @@
           if (pco%textout == "y") then
             write (2053,103) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_a, cal_sim, cal_adj
             if (pco%csvout == "y") then 
-              write (2057,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_a,    &
+              write (2057,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bwb_a,    &
                         cal_sim, cal_adj
             end if
           end if
@@ -321,7 +321,7 @@
           if (pco%textout == "y") then
             write (2063,104) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_a
             if (pco%csvout == "y") then 
-              write (2067,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_a
+              write (2067,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bnb_a
             end if
           end if
 #ifdef SQLITE_ENABLED
@@ -337,7 +337,7 @@
           if (pco%textout == "y") then
             write (2073,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_a
             if (pco%csvout == "y") then 
-              write (2077,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_a
+              write (2077,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bls_a
             end if
           end if
 #ifdef SQLITE_ENABLED
@@ -354,7 +354,7 @@
           if (pco%textout == "y") then
             write (2083,100) time%day, time%mo, time%day_mo, time%yrc, "       1", "       1", bsn%name, bpw_a
             if (pco%csvout == "y") then 
-              write (2087,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "        1", bsn%name, bpw_a
+              write (2087,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, "       1", "        1", bsn%name, bpw_a
             end if
           end if
 #ifdef SQLITE_ENABLED

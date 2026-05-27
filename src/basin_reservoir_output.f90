@@ -42,7 +42,7 @@
             write (2100,100) time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, bres_wat_d, &
               bres, bres_in_d, bres_out_d
             if (pco%csvout == "y") then
-              write (2104,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
+              write (2104,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
                 bres_wat_d, bres, bres_in_d, bres_out_d
             end if
 #ifdef SQLITE_ENABLED
@@ -64,7 +64,7 @@
            write (2101,100) time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name,  bres_wat_m, bres, &
              bres_in_m, bres_out_m 
             if (pco%csvout == "y") then
-              write (2105,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name,  &
+              write (2105,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name,  &
                 bres_wat_m, bres, bres_in_m, bres_out_m
             endif
 #ifdef SQLITE_ENABLED
@@ -88,7 +88,7 @@
             write (2102,100) time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name,  bres_wat_y, &
               bres, bres_in_y, bres_out_y
             if (pco%csvout == "y") then
-              write (2106,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
+              write (2106,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
                 bres_wat_y, bres, bres_in_y, bres_out_y 
             end if
 #ifdef SQLITE_ENABLED
@@ -111,7 +111,7 @@
         write (2103,100) time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, bres_wat_a, bres, &
           bres_in_a, bres_out_a
         if (pco%csvout == "y") then 
-          write (2107,'(*(G0.3,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
+          write (2107,'(*(G0.6,:","))') time%day, time%mo, time%day_mo, time%yrc, ires, "     1", bsn%name, &
             bres_wat_a, bres, bres_in_a, bres_out_a
         end if
 #ifdef SQLITE_ENABLED
