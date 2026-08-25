@@ -57,11 +57,11 @@
         xx = 0.
         ! zz = 3. + (8. - 3.)*exp(-5.5*soil(jj)%phys(l)%clay/100.) <- original equation.
         if (bio_mix_event) then
-          zz = zz_bmix_coef_a + (zz_bmix_coef_b)*exp(zz_bmix_coef_c*soil(jj)%phys(l)%clay/100.)
+          zz = bmix_a + (bmix_b)*exp(bmix_c*soil(jj)%phys(l)%clay/100.)
           yy = 0.0 !Setting this to zero so biomix does NOT accumulate from one day to the next.
         else
           ! zz = 3. + (15. - 3.)*exp(-5.5*soil(jj)%phys(l)%clay/100.) <- original equation.
-          zz = zz_emix_coef_a + (zz_emix_coef_b)*exp(zz_emix_coef_c*soil(jj)%phys(l)%clay/100.)
+          zz = tillmix_a + (tillmix_b)*exp(tillmix_c*soil(jj)%phys(l)%clay/100.)
           yy = soil(jj)%ly(l)%tillagef_tillmix / zz
         endif
         m1 = 1
@@ -70,7 +70,7 @@
         ! empirical solution for x when y is known and y=x/(x+exp(m1-m2*x)) 
         if (yy > 0.01) then
           xx1 = yy ** exp_w(-0.13 + 1.06 * yy)
-          ! xx2 = exp_w(0.64 + 0.64 * yy ** 100.)   ! This causes an arithmatic error that is ignored by intel but not by gfortran
+          ! xx2 = exp_w(0.64 + 0.64 * yy ** 100.)   ! This causes an arithmetic error that is ignored by intel but not by gfortran
           xx2 = exp_w(0.64 + 0.64 * yy ** 10.)
           if (xx2 > 10.) xx2 = 10.
           xx = xx1 * xx2
@@ -88,7 +88,7 @@
           else
             soil(jj)%ly(l)%tillagef_tillmix = zz * (csdr / (csdr + exp(m1 - m2*csdr)))
             ! Reduce till_mix by the fraction mixed in the soil layer and 
-            ! this occures with the tillage depth is inbetween soil layer depths
+            ! this occurs with the tillage depth is in between soil layer depths
             if (soil(jj)%ly(l)%tillagef_tillmix > 0.) then 
               soil(jj)%ly(l)%tillagef_tillmix = soil(jj)%ly(l)%tillagef_tillmix * frac_mixed
             endif
