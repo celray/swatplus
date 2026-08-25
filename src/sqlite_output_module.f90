@@ -300,6 +300,23 @@
         
       end subroutine sqlite_insert_row_start_named
       
+      !> SQL column type for a column name, matching how the insert helpers bind it.
+      !! Integer columns are bound with sqlite_insert_row_add_int/int8 and text
+      !! columns with sqlite_insert_row_add_text; every other column is a real.
+      function col_sql_type(col_name) result(sql_type)
+        character(len=*), intent(in) :: col_name
+        character(len=8) :: sql_type
+
+        select case (trim(adjustl(col_name)))
+        case ("jday", "mon", "day", "yr", "gis_id", "unit")
+          sql_type = "INTEGER"
+        case ("name", "typ", "plant_cov", "mgt_ops")
+          sql_type = "TEXT"
+        case default
+          sql_type = "REAL"
+        end select
+      end function col_sql_type
+
       !> Create a table with proper column names
       subroutine sqlite_create_table_with_names(table_name, col_names)
         character(len=*), intent(in) :: table_name
@@ -309,11 +326,15 @@
         
         n = size(col_names)
         
-        ! Build CREATE TABLE statement - use TEXT type for flexibility
+        ! Build CREATE TABLE statement. Each column carries the type it is bound
+        ! with. A TEXT column has TEXT affinity, which converts bound INTEGER and
+        ! REAL values to strings on storage; SQL aggregates then compare them as
+        ! strings, so max() over a column written in scientific notation returns
+        ! the wrong row.
         sql = "CREATE TABLE IF NOT EXISTS """ // trim(table_name) // """ ("""
-        sql = trim(sql) // trim(adjustl(col_names(1))) // """ TEXT"
+        sql = trim(sql) // trim(adjustl(col_names(1))) // """ " // col_sql_type(col_names(1))
         do i = 2, n
-          sql = trim(sql) // ", """ // trim(adjustl(col_names(i))) // """ TEXT"
+          sql = trim(sql) // ", """ // trim(adjustl(col_names(i))) // """ " // col_sql_type(col_names(i))
         end do
         sql = trim(sql) // ");"
         
