@@ -124,7 +124,16 @@ subroutine cli_ncdf_meas
     character(len=256) :: time_units
     character(len=257, kind=c_char) :: time_units_c
     integer(c_size_t) :: att_len
-    
+
+    ! Alignment of the grid's time axis to the simulation period
+    integer :: itime_offset = 0     ! records to skip before the simulation start
+    integer :: grid_days, sim_days  ! day numbers of grid start and simulation start
+    integer :: avail_days           ! days of grid data from the simulation start on
+    integer :: yrs_avail            ! whole years covered by avail_days
+    integer :: acc_days             ! accumulator while counting those years
+    character(len=256) :: time_calendar
+    character(len=257, kind=c_char) :: time_calendar_c
+
     ! Loop counters and diagnostics
     integer :: itime, iyear, iday, i, iwst
     integer :: actual_year, days_in_year_loop
@@ -272,12 +281,73 @@ subroutine cli_ncdf_meas
         
         ! Parse reference date from time units string
         call parse_time_units(time_units, ref_year, ref_month, ref_day)
-        
+
+        ! The day arithmetic below assumes a real-world calendar. Reject anything else
+        ! instead of silently sliding a day per missing leap day.
+        time_calendar = "standard"
+        status = nc_inq_attlen_c(ncid, time_varid, "calendar" // c_null_char, att_len)
+        if (status == NC_NOERR .and. att_len > 0 .and. att_len < 256) then
+            time_calendar_c = repeat(c_null_char, 257)
+            status = nc_get_att_text_c(ncid, time_varid, "calendar" // c_null_char, time_calendar_c)
+            if (status == NC_NOERR) call c_to_f_string(time_calendar_c, time_calendar)
+        endif
+        call lowercase_str(time_calendar)
+        if (time_calendar /= "standard" .and. time_calendar /= "gregorian" .and.        &
+            time_calendar /= "proleptic_gregorian") then
+            write (*,*) "! error: unsupported netCDF time calendar: ", trim(time_calendar)
+            write (*,*) "         only standard/gregorian/proleptic_gregorian are supported"
+            write (9003,*) "! error: unsupported netCDF time calendar: ", trim(time_calendar)
+            stop
+        endif
+
         status = nc_get_var_float_c(ncid, time_varid, time_vals)
         if (status == NC_NOERR) then
             if (ntime >= 1) then
                 days_since_ref = int(time_vals(1))
                 call add_days_to_date(ref_year, ref_month, ref_day, days_since_ref, year, month, day)
+
+                !! align the grid to the simulation period. The grid's first record is not
+                !! assumed to be the simulation start year - offset into it instead.
+                grid_days = days_from_civil(year, month, day)
+                sim_days = days_from_civil(time%yrc_start, 1, 1)
+                itime_offset = sim_days - grid_days
+
+                if (itime_offset < 0) then
+                    write (*,*) "! error: netCDF climate grid starts after the simulation start"
+                    write (*,*) "         grid starts ", year, month, day
+                    write (*,*) "         simulation starts ", time%yrc_start, 1, 1
+                    write (9003,*) "! error: netCDF climate grid starts after the simulation start"
+                    stop
+                endif
+
+                avail_days = ntime - itime_offset
+                if (avail_days < 365) then
+                    write (*,*) "! error: netCDF climate grid holds less than one year from ", time%yrc_start
+                    write (9003,*) "! error: netCDF climate grid holds less than one year from ", time%yrc_start
+                    stop
+                endif
+
+                !! whole years of grid data available from the simulation start
+                yrs_avail = 0
+                acc_days = 0
+                do
+                    if (is_leap_year(time%yrc_start + yrs_avail)) then
+                        if (acc_days + 366 > avail_days) exit
+                        acc_days = acc_days + 366
+                    else
+                        if (acc_days + 365 > avail_days) exit
+                        acc_days = acc_days + 365
+                    endif
+                    yrs_avail = yrs_avail + 1
+                end do
+
+                if (time%yrc_start + yrs_avail - 1 < time%yrc_end) then
+                    write (*,*) "! warning: netCDF climate grid ends before the simulation does"
+                    write (*,*) "           grid covers through ", time%yrc_start + yrs_avail - 1,   &
+                                " simulation runs to ", time%yrc_end
+                    write (*,*) "           the weather generator will fill the remaining years"
+                    write (9003,*) "! warning: netCDF climate grid ends before the simulation does"
+                endif
             endif
         else
             write (*,*) "! error reading time data, code: ", status
@@ -480,8 +550,10 @@ contains
     subroutine setup_timeseries_arrays(iwst, ntime_total)
         integer, intent(in) :: iwst, ntime_total
         
-        ! Calculate number of years (approximate for daily data)
-        pcp(iwst)%nbyr = max(1, ntime_total / 365)
+        ! Years of grid data available from the simulation start onwards. Counted from
+        ! the calendar in yrs_avail, not ntime_total/365, so a grid that starts before
+        ! the simulation or ends before it does not overstate its coverage.
+        pcp(iwst)%nbyr = max(1, yrs_avail)
         tmp(iwst)%nbyr = pcp(iwst)%nbyr
         slr(iwst)%nbyr = pcp(iwst)%nbyr
         hmd(iwst)%nbyr = pcp(iwst)%nbyr
@@ -501,9 +573,10 @@ contains
         hmd(iwst)%days_gen = 0
         wnd(iwst)%days_gen = 0
         
-        ! Set start and end years
-        pcp(iwst)%start_yr = time%yrc
-        pcp(iwst)%end_yr = time%yrc + pcp(iwst)%nbyr - 1
+        ! Set start and end years. start_yr is now true rather than assumed: the fill
+        ! below is offset so that array year 1 really is the simulation start year.
+        pcp(iwst)%start_yr = time%yrc_start
+        pcp(iwst)%end_yr = time%yrc_start + pcp(iwst)%nbyr - 1
         pcp(iwst)%start_day = 1
         
         ! Calculate end_day based on leap year for last year
@@ -560,7 +633,8 @@ contains
     subroutine populate_timeseries_data(iwst, target_lat_idx, target_lon_idx, ntime_total)
         integer, intent(in) :: iwst, target_lat_idx, target_lon_idx, ntime_total
         
-        itime = 1
+        !! start at the record matching the simulation start, not at record one
+        itime = itime_offset + 1
         do iyear = 1, pcp(iwst)%nbyr
             ! Calculate actual year for leap year check
             actual_year = pcp(iwst)%start_yr + iyear - 1
@@ -726,6 +800,42 @@ contains
         endif
         
     end function is_leap_year
+
+    ! Days from 1970-01-01 to the given proleptic Gregorian date, negative before it.
+    ! Used to line the grid's time axis up with the simulation start.
+    integer function days_from_civil(cy, cm, cd)
+        integer, intent(in) :: cy, cm, cd
+        integer :: y_adj, era, yoe, doy, doe
+
+        y_adj = cy
+        if (cm <= 2) y_adj = y_adj - 1
+        if (y_adj >= 0) then
+            era = y_adj / 400
+        else
+            era = (y_adj - 399) / 400
+        endif
+        yoe = y_adj - era * 400
+        if (cm > 2) then
+            doy = (153 * (cm - 3) + 2) / 5 + cd - 1
+        else
+            doy = (153 * (cm + 9) + 2) / 5 + cd - 1
+        endif
+        doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+        days_from_civil = era * 146097 + doe - 719468
+
+    end function days_from_civil
+
+    ! Lowercase in place, for comparing the calendar attribute
+    subroutine lowercase_str(str)
+        character(len=*), intent(inout) :: str
+        integer :: k, ic
+
+        do k = 1, len_trim(str)
+            ic = iachar(str(k:k))
+            if (ic >= 65 .and. ic <= 90) str(k:k) = achar(ic + 32)
+        end do
+
+    end subroutine lowercase_str
 
 end subroutine cli_ncdf_meas
 
