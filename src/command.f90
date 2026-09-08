@@ -58,13 +58,12 @@
       integer :: j = 0                !none          |counter
       integer :: ihyd = 0             !              |
       integer :: idr = 0              !              |
+      integer :: ipou = 0             !              |
       integer :: iwro = 0             !              |
       real :: conv = 0.               !              |
       real :: frac_in = 0.            !              |
       integer :: ts1 = 0
       integer :: ts2 = 0
-      integer :: iw = 0               !              |counter for water allocation object
-      integer :: iwallo = 0           !              |variable to pass to wallo_control
       integer :: i_count = 0          !rtb gwflow
       integer :: i_mfl = 0            !rtb gwflow    |counter
       integer :: i_chan = 0           !rtb gwflow    |counter
@@ -72,22 +71,8 @@
       real :: sumflo = 0.
 
       icmd = sp_ob1%objs
-      wallo(:)%trn_cur = 1
-      if (allocated(res_ob)) res_ob(:)%wallo_call = 0
       
       do while (icmd /= 0)
-          
-        !! allocate water for transfers that don't include a channel as a source
-        !! check here in case channel is last object
-        if (db_mx%wallo_db > 0) then
-          do iwallo = 1, db_mx%wallo_db  
-            do while (wallo(iwallo)%trn_cur > 0)
-              if (wallo(iwallo)%trn(wallo(iwallo)%trn_cur)%ch_src > 0) exit
-              iw = iwallo
-              if (wallo(iwallo)%trn_cur <= wallo(iwallo)%trn_obs) call wallo_control (iw)
-            end do
-          end do
-        end if
           
         if (ob(icmd)%typ == "hru" .or. ob(icmd)%typ == "ru") then
           !! hru and ru can have hyrdographs that lag into next day
@@ -259,7 +244,7 @@
                 hyd_flo(:) = ob(iob)%hd(ihyd)%flo / time%step
               case ("recall")   ! point source inflow
                 irec = ob(iob)%num
-                if (recall_db(irec)%org_min%tstep == "sub") then    !subdaily
+                if (recall(irec)%typ == 0) then    !subdaily
                   hyd_flo(:) = ob(iob)%hyd_flo(ob(iob)%day_cur,:)
                 else                                ! monthly, yearly, and ave annual
                   hyd_flo(:) = ob(iob)%hd(1)%flo / time%step
@@ -332,13 +317,13 @@
               
           case ("recall")   ! recall hydrograph
             irec = ob(icmd)%num
-            select case (recall_db(irec)%org_min%tstep)
-              case ("sub")    !subdaily
+            select case (recall(irec)%typ)
+              case (0)    !subdaily
                 ts1 = (time%day - 1) * time%step + 1
                 ts2 = time%day * time%step
                 ob(icmd)%hyd_flo(ob(icmd)%day_cur,:) = recall(irec)%hyd_flo(ts1:ts2,time%yrs)
                 ob(icmd)%hd(1) = recall(irec)%hd(time%day,time%yrs)
-              case ("day")    !daily
+              case (1)    !daily
                 if (time%yrc >= recall(irec)%start_yr .and. time%yrc <= recall(irec)%end_yr) then 
                     ob(icmd)%hd(1) = recall(irec)%hd(time%day,time%yrs)
                     !if negative flow (diversion), then remove nutrient mass
@@ -348,13 +333,13 @@
                 else
                     ob(icmd)%hd(1) = hz
                 end if
-              case ("mo")    !monthly
+              case (2)    !monthly
                 if (time%yrc >= recall(irec)%start_yr .and. time%yrc <= recall(irec)%end_yr) then 
                     ob(icmd)%hd(1) = recall(irec)%hd(time%mo,time%yrs)
                 else
                     ob(icmd)%hd(1) = hz
                 end if
-              case ("yr")    !yearly
+              case (3)    !yearly
                 if (time%yrc >= recall(irec)%start_yr .or. time%yrc <= recall(irec)%end_yr) then
                   ob(icmd)%hd(1) = recall(irec)%hd(1,time%yrs)
                 else
@@ -424,18 +409,6 @@
             
           end select
           
-        !! allocate water for transfers that don't include a channel as a source
-        !! check here in case channel is not the last object
-        if (db_mx%wallo_db > 0) then
-          do iwallo = 1, db_mx%wallo_db  
-            do while (wallo(iwallo)%trn_cur > 0)
-              if (wallo(iwallo)%trn(wallo(iwallo)%trn_cur)%ch_src > 0) exit
-              iw = iwallo
-              if (wallo(iwallo)%trn_cur <= wallo(iwallo)%trn_obs) call wallo_control (iw)
-            end do
-          end do
-        end if
-          
         !! compute flow duration curves for channels
         if (pco%fdcout == "y" .and. ob(icmd)%typ == "chandeg") then
           call flow_dur_curve
@@ -468,14 +441,12 @@
       if (time%yrs > pco%nyskip) then
       
         !! print water allocation output
-        do iwro =1, db_mx%wallo_db
-          call wallo_allo_output (iwro)
-          call wallo_trn_output (iwro)
-          call wallo_treat_output (iwro)
-          call wallo_use_output (iwro)
-          !call wallo_osrc_output (iwro)
-          !call wallo_odmd_output (iwro)
+        do ipou =1, db_mx%wallo_pou
+          call wallo_pou_output (ipou)
         end do
+        !! print amount treated and used
+        call wallo_treat_output
+        call wallo_use_output
         
         !! print manure allocation output
         do iwro =1, db_mx%mallo_db
@@ -539,27 +510,31 @@
             if (time%end_sim == 1 .and. (pco%cb_drv_hru%a == "y" .or. pco%cb_dyn_hru%a == "y")) call soil_carbvar_write(" a")
           endif
 
-          !! legacy CSU carbon outputs, gated by the hru_cb row in print.prt
-          !! will be removed in revision 63.
-          if (pco%cb_hru%d == "y") call soil_nutcarb_write_legacy(" d")
-          if (pco%cb_hru%d == "l") call soil_nutcarb_write_legacy("dl")
-          if (pco%cb_hru%m == "y" .and. time%end_mo == 1) call soil_nutcarb_write_legacy(" m")
-          if (pco%cb_hru%m == "l" .and. time%end_mo == 1) call soil_nutcarb_write_legacy("ml")
-          if (pco%cb_hru%y == "y" .and. time%end_yr == 1) call soil_nutcarb_write_legacy(" y")
-          if (pco%cb_hru%y == "l" .and. time%end_yr == 1) call soil_nutcarb_write_legacy("yl")
-
-          !! legacy CSU carbon variable outputs, gated by the hru_cb_vars row in print.prt
-          if (bsn_cc%cswat == 2) then
-            if (pco%cb_vars_hru%d == "y") call soil_carbvar_write_legacy(" d")
-            if (pco%cb_vars_hru%d == "l") call soil_carbvar_write_legacy("dl")
-            if (pco%cb_vars_hru%m == "y" .and. time%end_mo == 1) call soil_carbvar_write_legacy(" m")
-            if (pco%cb_vars_hru%m == "l" .and. time%end_mo == 1) call soil_carbvar_write_legacy("ml")
-            if (pco%cb_vars_hru%y == "y" .and. time%end_yr == 1) call soil_carbvar_write_legacy(" y")
-            if (pco%cb_vars_hru%y == "l" .and. time%end_yr == 1) call soil_carbvar_write_legacy("yl")
-          endif
-
         end do      ! hru loop
-        
+
+        !! legacy CSU carbon outputs, gated by the hru_cb row in print.prt
+        !! will be removed in revision 63.
+        !! soil_nutcarb_write_legacy iterates all HRUs internally, so it must be
+        !! called once per output event here, not once per hru inside the loop above
+        !! (that duplicated every row sp_ob%hru times).
+        if (pco%cb_hru%d == "y") call soil_nutcarb_write_legacy(" d")
+        if (pco%cb_hru%d == "l") call soil_nutcarb_write_legacy("dl")
+        if (pco%cb_hru%m == "y" .and. time%end_mo == 1) call soil_nutcarb_write_legacy(" m")
+        if (pco%cb_hru%m == "l" .and. time%end_mo == 1) call soil_nutcarb_write_legacy("ml")
+        if (pco%cb_hru%y == "y" .and. time%end_yr == 1) call soil_nutcarb_write_legacy(" y")
+        if (pco%cb_hru%y == "l" .and. time%end_yr == 1) call soil_nutcarb_write_legacy("yl")
+
+        !! legacy CSU carbon variable outputs, gated by the hru_cb_vars row in print.prt
+        !! same iterates-all-hrus-internally reasoning as above.
+        if (bsn_cc%cswat == 2) then
+          if (pco%cb_vars_hru%d == "y") call soil_carbvar_write_legacy(" d")
+          if (pco%cb_vars_hru%d == "l") call soil_carbvar_write_legacy("dl")
+          if (pco%cb_vars_hru%m == "y" .and. time%end_mo == 1) call soil_carbvar_write_legacy(" m")
+          if (pco%cb_vars_hru%m == "l" .and. time%end_mo == 1) call soil_carbvar_write_legacy("ml")
+          if (pco%cb_vars_hru%y == "y" .and. time%end_yr == 1) call soil_carbvar_write_legacy(" y")
+          if (pco%cb_vars_hru%y == "l" .and. time%end_yr == 1) call soil_carbvar_write_legacy("yl")
+        endif
+
         do iaq = 1, sp_ob%aqu
           call aquifer_output (iaq)
           if (cs_db%num_salts > 0) then !rtb salt

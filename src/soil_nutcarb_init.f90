@@ -2,7 +2,7 @@
 
 !!    ~ ~ ~ PURPOSE ~ ~ ~
 !!    this subroutine initializes soil chemical properties
-!!    and intial soil layer bmix efficiency
+!!    and initial soil layer bmix efficiency
 
       use hru_module, only : hru, ihru, sol_plt_ini
       use soil_module
@@ -38,12 +38,9 @@
       isol_pl = hru(ihru)%dbs%soil_plant_init
       isolt = sol_plt_ini(isol_pl)%nut          ! isolt = 0 = default in type
       
+      !! assume 0.001% carbon if zero
       do ly = 1, nly
-        if (ly == 1) then
-          soil1(ihru)%cbn(ly) = max(0.001, soil(ihru)%phys(ly)%cbn)    !! assume 0.001% carbon if zero
-        else
-          soil1(ihru)%cbn(ly) = soil(ihru)%phys(ly)%cbn    
-        endif
+          soil1(ihru)%cbn(ly) = max(0.001, soil(ihru)%phys(ly)%cbn)
       enddo
 
       !! calculate initial nutrient contents of layers, profile and
