@@ -646,38 +646,63 @@ contains
             
             do iday = 1, days_in_year_loop
                 if (itime <= ntime_total) then
+                    ! Preserve missing values before scaling and physical bounds.
                     ! Precipitation - apply station scaling factor
                     if (allocated(pcp_data)) then
-                        pcp(iwst)%ts(iday, iyear) = pcp_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%pcp_factor
-                        if (pcp(iwst)%ts(iday, iyear) < 0.0) pcp(iwst)%ts(iday, iyear) = 0.0
+                        if (pcp_data(target_lon_idx, target_lat_idx, itime) <= -97.0) then
+                            pcp(iwst)%ts(iday, iyear) = pcp_data(target_lon_idx, target_lat_idx, itime)
+                        else
+                            pcp(iwst)%ts(iday, iyear) = pcp_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%pcp_factor
+                            if (pcp(iwst)%ts(iday, iyear) < 0.0) pcp(iwst)%ts(iday, iyear) = 0.0
+                        endif
                     endif
                     
                     ! Temperature - populate both ts (TMAX) and ts2 (TMIN)
                     if (allocated(tmax_data)) then
-                        tmp(iwst)%ts(iday, iyear) = tmax_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%tmax_factor
+                        if (tmax_data(target_lon_idx, target_lat_idx, itime) <= -97.0) then
+                            tmp(iwst)%ts(iday, iyear) = tmax_data(target_lon_idx, target_lat_idx, itime)
+                        else
+                            tmp(iwst)%ts(iday, iyear) = tmax_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%tmax_factor
+                        endif
                     endif
                     
                     if (allocated(tmin_data)) then
-                        tmp(iwst)%ts2(iday, iyear) = tmin_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%tmin_factor
+                        if (tmin_data(target_lon_idx, target_lat_idx, itime) <= -97.0) then
+                            tmp(iwst)%ts2(iday, iyear) = tmin_data(target_lon_idx, target_lat_idx, itime)
+                        else
+                            tmp(iwst)%ts2(iday, iyear) = tmin_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%tmin_factor
+                        endif
                     endif
                     
                     ! Solar radiation
                     if (allocated(slr_data)) then
-                        slr(iwst)%ts(iday, iyear) = slr_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%slr_factor
-                        if (slr(iwst)%ts(iday, iyear) < 0.0) slr(iwst)%ts(iday, iyear) = 0.0
+                        if (slr_data(target_lon_idx, target_lat_idx, itime) <= -97.0) then
+                            slr(iwst)%ts(iday, iyear) = slr_data(target_lon_idx, target_lat_idx, itime)
+                        else
+                            slr(iwst)%ts(iday, iyear) = slr_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%slr_factor
+                            if (slr(iwst)%ts(iday, iyear) < 0.0) slr(iwst)%ts(iday, iyear) = 0.0
+                        endif
                     endif
                     
                     ! Humidity
                     if (allocated(hmd_data)) then
-                        hmd(iwst)%ts(iday, iyear) = hmd_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%hmd_factor
-                        if (hmd(iwst)%ts(iday, iyear) < 0.0) hmd(iwst)%ts(iday, iyear) = 0.0
-                        if (hmd(iwst)%ts(iday, iyear) > 1.0) hmd(iwst)%ts(iday, iyear) = 1.0
+                        if (hmd_data(target_lon_idx, target_lat_idx, itime) <= -97.0) then
+                            hmd(iwst)%ts(iday, iyear) = hmd_data(target_lon_idx, target_lat_idx, itime)
+                        else
+                            hmd(iwst)%ts(iday, iyear) = hmd_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%hmd_factor
+                            if (hmd(iwst)%ts(iday, iyear) < 0.0) hmd(iwst)%ts(iday, iyear) = 0.0
+                            if (hmd(iwst)%ts(iday, iyear) > 1.0) hmd(iwst)%ts(iday, iyear) = 1.0
+                        endif
                     endif
                     
                     ! Wind speed
                     if (allocated(wnd_data)) then
-                        wnd(iwst)%ts(iday, iyear) = wnd_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%wnd_factor
-                        if (wnd(iwst)%ts(iday, iyear) < 0.0) wnd(iwst)%ts(iday, iyear) = 0.0
+                        if (wnd_data(target_lon_idx, target_lat_idx, itime) <= -97.0) then
+                            wnd(iwst)%ts(iday, iyear) = wnd_data(target_lon_idx, target_lat_idx, itime)
+                        else
+                            wnd(iwst)%ts(iday, iyear) = wnd_data(target_lon_idx, target_lat_idx, itime) * wst(iwst)%wnd_factor
+                            if (wnd(iwst)%ts(iday, iyear) < 0.0) wnd(iwst)%ts(iday, iyear) = 0.0
+                        endif
                     endif
                     
                     itime = itime + 1

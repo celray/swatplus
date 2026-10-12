@@ -59,6 +59,12 @@ The NetCDF file must contain:
 
 Variables not found in the NetCDF file will use the weather generator instead.
 
+Daily values at or below -97, including -999 and -9999, are preserved before
+scaling or applying physical bounds so that SWAT+ can generate the missing
+weather. The reader assigns -99 when a variable is absent. Valid values keep
+the usual scaling and bounds. NetCDF fill values outside this negative range
+must be converted to a supported missing-value code before use.
+
 ## Configuration Files
 
 ### 1. The `.ncw` File (Weather Station Definitions)
@@ -92,6 +98,7 @@ station2         wgn_name2         -17.25         29.75          1156        1.0
 **Scale Factor Values:**
 - `1.0` - Use the NetCDF data as-is
 - Other positive values - Multiply NetCDF data by this factor (e.g., `1.1` increases values by 10%)
+- `-99` - Generate weather for this variable; either temperature factor selects generation for both temperatures
 - `null` - Variable not used or handled separately
 
 ### 2. The `file.cio` Configuration
