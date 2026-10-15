@@ -85,9 +85,10 @@
 
       ob_num = sp_ob1%hru  !object number of first HRU
       do k=1,sp_ob%hru
-        max_gwet = etremain(k) !maximum ET rate from the water table (mm)
         do i=1,hru_num_cells(k)
-					max_gwet = max_gwet * hru_cells_fract(k,i) !mm
+          !potential ET for this cell: the HRU's remaining ET times the cell's fraction of the HRU area
+          !(each cell on its own, so the result does not depend on the order of the HRU's cells)
+          max_gwet = etremain(k) * hru_cells_fract(k,i) !mm
           cell_id = hru_cells(k,i)
           et_surface = gw_state(cell_id)%elev !ground surface
           et_bottom = et_surface - gw_state(cell_id)%exdp !lower elevation bound for ET to occur
