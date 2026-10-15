@@ -21,7 +21,7 @@
       
       implicit none
       
-      external :: cs_fert, cs_fert_wet, curno, mgt_harvbiomass, mgt_harvgrain, mgt_harvresidue, &
+      external :: cs_fert, cs_fert_wet, curno, soil_bd_update, mgt_harvbiomass, mgt_harvgrain, mgt_harvresidue, &
                   mgt_harvtuber, mgt_killop, mgt_newtillmix, mgt_newtillmix_cswat0, mgt_newtillmix_cswat1, &
                   mgt_newtillmix_wet, mgt_plantop, pest_apply, &
                   pl_burnop, pl_fert, pl_fert_wet, pl_manure, salt_fert, salt_fert_wet, chg_par, &
@@ -59,6 +59,8 @@
       integer :: idb = 0           !none     |counter
       integer :: itr = 0
       integer :: iwr = 0           !none     |weir counter Chawanda 2025
+      integer :: ly_bd = 0         !none     |soil layer for bdup (0 = all layers)
+      integer :: ios_bd = 0        !none     |read status of the bdup layer
 
       j = ihru
       ires= hru(j)%dbs%surf_stor ! for paddy management Jaehak 2022
@@ -463,6 +465,23 @@
                 pl_mass(j)%rsd_tot%m, sol_sumno3(j), sol_sumsolp(j), mgt%op3, cn2(j)
             endif
  
+          case ("bdup")   !! soil bulk density update, keeping layer soil water
+            !! op_char = change type (absval, abschg, pctchg), op_plant = layer ("all", "null" or "0" = every layer),
+            !! op3 = value
+            ipl = 1
+            ly_bd = 0
+            if (mgt%op_plant /= "all" .and. mgt%op_plant /= "null") then
+              read (mgt%op_plant,*,iostat=ios_bd) ly_bd
+              if (ios_bd /= 0) ly_bd = 0
+            end if
+            call soil_bd_update (j, ly_bd, mgt%op_char, mgt%op3, "bdup")
+
+            if (pco%mgtout == "y") then
+              write (2612,*) j, time%yrc, time%mo, time%day_mo, mgt%op_char, "    BDUP ", &
+                phubase(j), pcom(j)%plcur(ipl)%phuacc, soil(j)%sw, pl_mass(j)%tot(ipl)%m,           &
+                pl_mass(j)%rsd_tot%m, sol_sumno3(j), sol_sumsolp(j), ly_bd, mgt%op3
+            endif
+
           case ("burn")   !! burning
             iburn = mgt%op1   ! burn type from fire database
             call pl_burnop(j, iburn)

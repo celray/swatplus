@@ -32,7 +32,7 @@
 
       implicit none
       
-      external :: cn2_init, cs_fert, curno, hru_fr_change, hru_lum_init, mgt_harvbiomass, mgt_harvgrain, &
+      external :: cn2_init, cs_fert, curno, soil_bd_update, hru_fr_change, hru_lum_init, mgt_harvbiomass, mgt_harvgrain, &
                   mgt_harvresidue, mgt_harvtuber, mgt_killop, mgt_newtillmix, mgt_newtillmix_wet, &
                   mgt_transplant, pest_apply, pl_burnop, pl_fert, pl_fert_wet, pl_graze, pl_manure, &
                   plant_init, salt_fert, structure_set_parms, wet_initial, chg_par, mgt_newtillmix_cswat1, &
@@ -92,6 +92,8 @@
       real :: p_factor = 0.
       real :: cn_prev = 0.
       real :: stor_m3 = 0.
+      integer :: ly_bd = 0         !none          |soil layer for bd_update (0 = all layers)
+      integer :: ios_bd = 0        !none          |read status of the bd_update layer
       character(len=1) :: action = ""      !         |
       character(len=40) :: lu_prev = ""    !         |
       character(len=40) :: snow_prev = ""  !         |
@@ -1261,6 +1263,30 @@
             
             end if
             
+            pcom(j)%dtbl(idtbl)%num_actions(iac) = pcom(j)%dtbl(idtbl)%num_actions(iac) + 1
+
+          !update soil bulk density, keeping layer soil water
+          !option = change type (absval, abschg, pctchg), const = value, const2 = max number of times,
+          !file_pointer = layer number ("all", "null" or "0" = every layer)
+          case ("bd_update")
+            j = d_tbl%act(iac)%ob_num
+            if (j == 0) j = ob_cur
+
+            if (pcom(j)%dtbl(idtbl)%num_actions(iac) <= Int(d_tbl%act(iac)%const2)) then
+              ly_bd = 0
+              if (d_tbl%act(iac)%file_pointer /= "all" .and. d_tbl%act(iac)%file_pointer /= "null") then
+                read (d_tbl%act(iac)%file_pointer,*,iostat=ios_bd) ly_bd
+                if (ios_bd /= 0) ly_bd = 0
+              end if
+              call soil_bd_update (j, ly_bd, d_tbl%act(iac)%option, d_tbl%act(iac)%const, "bd_update")
+              if (pco%mgtout == "y") then
+                ipl = 1
+                write (2612, *) j, time%yrc, time%mo, time%day_mo, d_tbl%act(iac)%name, "    BDUP", phubase(j),    &
+                  pcom(j)%plcur(ipl)%phuacc, soil(j)%sw, pl_mass(j)%tot(ipl)%m, pl_mass(j)%rsd_tot%m,       &
+                  sol_sumno3(j), sol_sumsolp(j), ly_bd, d_tbl%act(iac)%const
+              end if
+            end if
+
             pcom(j)%dtbl(idtbl)%num_actions(iac) = pcom(j)%dtbl(idtbl)%num_actions(iac) + 1
                           
           case ("pheno_reset")  !! begin and end monsoon initiation period
