@@ -7,8 +7,12 @@
       use reservoir_module
       use time_module
       use recall_module
+      use hru_module, only : hru
+      use basin_module, only : bsn_cc
       
       implicit none 
+
+      external :: gwflow_pump_allo
 
       integer, intent (in):: ipod         !point of diversion number
       integer, intent (in) :: ipou        !place of use number
@@ -21,6 +25,12 @@
       real :: wtow_min = 0.         !m3         |minimum allowable storage in water tower for withdrawal
       real :: rto = 0.              !none       |ratio of water withdrawn to available water in the PODl
       real :: wdraw_max = 0.        !m3         |maximum water that can be withdrawn
+      real :: wdraw = 0.            !m3         |withdrawal requested from the POD
+      real :: area_tot = 0.         !ha         |area of the irrigated hrus of the POU
+      real :: gw_pumped = 0.        !m3         |groundwater pumped from gwflow
+      real :: gw_unmet = 0.         !m3         |withdrawal not met by gwflow storage
+      integer :: ihru = 0           !none       |counter for irrigated hrus of the POU
+      integer :: jhru = 0           !none       |hru number
         
       !! POD (source) object number from POD object
       j = pod(ipod)%typ_num
@@ -122,8 +132,28 @@
           outflo_om%solp = rto * aqu_d(j)%minp * aqu_prm(j)%area_ha
         end if
         
-      !! gwflow source
+      !! gwflow source - typ_num 0 pumps from the cells under each irrigated hru of the POU (withdrawal
+      !! split by hru area), typ_num > 0 from that cell; pumping is limited by cell storage
       case ("gwf") 
+        if (bsn_cc%gwflow == 1) then
+          wdraw = pou(pou_num)%pod(pod_num)%frac * wdraw_max
+          if (pou(pou_num)%irr%hru_num > 0) then
+            area_tot = 0.
+            do ihru = 1, pou(pou_num)%irr%hru_num
+              area_tot = area_tot + hru(pou(pou_num)%irr%hru(ihru))%area_ha
+            end do
+            if (area_tot > 0.) then
+              do ihru = 1, pou(pou_num)%irr%hru_num
+                jhru = pou(pou_num)%irr%hru(ihru)
+                call gwflow_pump_allo (jhru, j, wdraw * hru(jhru)%area_ha / area_tot, gw_pumped, gw_unmet)
+                outflo_om%flo = outflo_om%flo + gw_pumped
+              end do
+            end if
+          else if (j > 0) then
+            call gwflow_pump_allo (0, j, wdraw, gw_pumped, gw_unmet)
+            outflo_om%flo = gw_pumped
+          end if
+        end if
         
       end select
       

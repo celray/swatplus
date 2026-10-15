@@ -32,7 +32,8 @@
 
       implicit none
       
-      external :: cn2_init, cs_fert, curno, soil_bd_update, hru_fr_change, hru_lum_init, mgt_harvbiomass, mgt_harvgrain, &
+      external :: soil_bd_update, gwflow_pump_allo
+      external :: cn2_init, cs_fert, curno, hru_fr_change, hru_lum_init, mgt_harvbiomass, mgt_harvgrain, &
                   mgt_harvresidue, mgt_harvtuber, mgt_killop, mgt_newtillmix, mgt_newtillmix_wet, &
                   mgt_transplant, pest_apply, pl_burnop, pl_fert, pl_fert_wet, pl_graze, pl_manure, &
                   plant_init, salt_fert, structure_set_parms, wet_initial, chg_par, mgt_newtillmix_cswat1, &
@@ -94,6 +95,8 @@
       real :: stor_m3 = 0.
       integer :: ly_bd = 0         !none          |soil layer for bd_update (0 = all layers)
       integer :: ios_bd = 0        !none          |read status of the bd_update layer
+      real :: gw_pumped = 0.       !m3            |groundwater pumped from gwflow for irrigation
+      real :: gw_unmet = 0.        !m3            |irrigation demand not met by gwflow storage
       character(len=1) :: action = ""      !         |
       character(len=40) :: lu_prev = ""    !         |
       character(len=40) :: snow_prev = ""  !         |
@@ -319,6 +322,27 @@
               !cs_irr(iob) = rto * res_water(iob)                        ! constituents in irrigation water
               !res_water(iob) = rto1 * res_water(iob)                    ! remainder stays in reservoir
               
+            !gwflow aquifer - ob_num 0 pumps from the cells under the hru, > 0 from that cell;
+            !pumping is limited by cell storage and the applied depth is reduced by the unmet fraction
+            case ("gwf")
+              if (bsn_cc%gwflow == 1) then
+                call gwflow_pump_allo (j, iob, irrig(j)%demand, gw_pumped, gw_unmet)
+              else
+                gw_pumped = 0.
+                gw_unmet = irrig(j)%demand
+              end if
+              if (irrig(j)%demand > 1.e-6) then
+                rto = gw_pumped / irrig(j)%demand
+              else
+                rto = 0.
+              end if
+              rto = amax1 (0., rto)
+              rto = amin1 (1., rto)
+              irrig(j)%applied = rto * irrig(j)%applied
+              irrig(j)%runoff = rto * irrig(j)%runoff
+              irrig(j)%water = hz
+              irrig(j)%water%flo = gw_pumped                            ! m3 pumped (solutes added to soil in gwflow_pump_allo)
+
             end select
                   
             ! add irrigation to yearly sum for dtbl conditioning jga 6-25

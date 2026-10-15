@@ -901,31 +901,36 @@
       hru_pump_mo = 0.
       hru_pump_yr = 0.
       hru_pump_aa = 0.
+      allocate(hru_pump_dmd(sp_ob%hru), hru_pump_dmd_mo(sp_ob%hru), hru_pump_dmd_yr(sp_ob%hru), hru_pump_dmd_aa(sp_ob%hru))
+      allocate(hru_pump_unmet(sp_ob%hru), hru_pump_unmet_mo(sp_ob%hru), hru_pump_unmet_yr(sp_ob%hru), &
+               hru_pump_unmet_aa(sp_ob%hru))
+      hru_pump_dmd = 0.; hru_pump_dmd_mo = 0.; hru_pump_dmd_yr = 0.; hru_pump_dmd_aa = 0.
+      hru_pump_unmet = 0.; hru_pump_unmet_mo = 0.; hru_pump_unmet_yr = 0.; hru_pump_unmet_aa = 0.
       if(gwflag_pump == 1) then
         open(out_hru_pump_day,file='gwflow_hru_pump_day.txt')
         write(out_hru_pump_day,*) 'gwflow HRU pumping for irrigation (m3/day)'
-        write(out_hru_pump_day,'(4a6,2a8,a18,a13)') &
-          'jday','mon','day','yr','unit','gis_id','name','pump_allo'
-        write(out_hru_pump_day,'(4a6,2a8,a18,a13)') &
-          '','','','','','','','m3/day'
+        write(out_hru_pump_day,'(4a6,2a8,a18,3a13)') &
+          'jday','mon','day','yr','unit','gis_id','name','pump_allo','demand','unmet'
+        write(out_hru_pump_day,'(4a6,2a8,a18,3a13)') &
+          '','','','','','','','m3/day','m3/day','m3/day'
         open(out_hru_pump_mo,file='gwflow_hru_pump_mon.txt')
         write(out_hru_pump_mo,*) 'gwflow HRU pumping for irrigation monthly total (m3)'
-        write(out_hru_pump_mo,'(4a6,2a8,a18,a13)') &
-          'jday','mon','day','yr','unit','gis_id','name','pump_allo'
-        write(out_hru_pump_mo,'(4a6,2a8,a18,a13)') &
-          '','','','','','','','m3'
+        write(out_hru_pump_mo,'(4a6,2a8,a18,3a13)') &
+          'jday','mon','day','yr','unit','gis_id','name','pump_allo','demand','unmet'
+        write(out_hru_pump_mo,'(4a6,2a8,a18,3a13)') &
+          '','','','','','','','m3','m3','m3'
         open(out_hru_pump_yr,file='gwflow_hru_pump_yr.txt')
         write(out_hru_pump_yr,*) 'gwflow HRU pumping for irrigation annual total (m3)'
-        write(out_hru_pump_yr,'(4a6,2a8,a18,a13)') &
-          'jday','mon','day','yr','unit','gis_id','name','pump_allo'
-        write(out_hru_pump_yr,'(4a6,2a8,a18,a13)') &
-          '','','','','','','','m3'
+        write(out_hru_pump_yr,'(4a6,2a8,a18,3a13)') &
+          'jday','mon','day','yr','unit','gis_id','name','pump_allo','demand','unmet'
+        write(out_hru_pump_yr,'(4a6,2a8,a18,3a13)') &
+          '','','','','','','','m3','m3','m3'
         open(out_hru_pump_aa,file='gwflow_hru_pump_aa.txt')
         write(out_hru_pump_aa,*) 'gwflow HRU pumping for irrigation avg annual (m3/yr)'
-        write(out_hru_pump_aa,'(4a6,2a8,a18,a13)') &
-          'jday','mon','day','yr','unit','gis_id','name','pump_allo'
-        write(out_hru_pump_aa,'(4a6,2a8,a18,a13)') &
-          '','','','','','','','m3/yr'
+        write(out_hru_pump_aa,'(4a6,2a8,a18,3a13)') &
+          'jday','mon','day','yr','unit','gis_id','name','pump_allo','demand','unmet'
+        write(out_hru_pump_aa,'(4a6,2a8,a18,3a13)') &
+          '','','','','','','','m3/yr','m3/yr','m3/yr'
       endif
       inquire(file='hru_pump.gw',exist=i_exist)
       if(i_exist) then

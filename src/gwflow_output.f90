@@ -506,7 +506,7 @@
           'head','wt_depth','recharge','gw_et','gw_sw','sw_gw', &
           'sat_excess','soil','lateral', &
           'pump_allo','pump_ext','tile','reservoir','wetland', &
-          'floodplain','canal','pond','phytorem'
+          'floodplain','canal','pond','phytorem','pump_unmet'
       endif
       if(gwflag_mon.eq.1) then
         open(out_gwcell_mon,file='gwflow_cell_wb_mon.txt')
@@ -518,7 +518,7 @@
           'head','wt_depth','recharge','gw_et','gw_sw','sw_gw', &
           'sat_excess','soil','lateral', &
           'pump_allo','pump_ext','tile','reservoir','wetland', &
-          'floodplain','canal','pond','phytorem'
+          'floodplain','canal','pond','phytorem','pump_unmet'
       endif
       if(gwflag_yr.eq.1) then
         open(out_gwcell_yr,file='gwflow_cell_wb_yr.txt')
@@ -530,7 +530,7 @@
           'head','wt_depth','recharge','gw_et','gw_sw','sw_gw', &
           'sat_excess','soil','lateral', &
           'pump_allo','pump_ext','tile','reservoir','wetland', &
-          'floodplain','canal','pond','phytorem'
+          'floodplain','canal','pond','phytorem','pump_unmet'
       endif
       if(gwflag_aa.eq.1) then
         open(out_gwcell_aa,file='gwflow_cell_wb_aa.txt')
@@ -542,7 +542,7 @@
           'head','wt_depth','recharge','gw_et','gw_sw','sw_gw', &
           'sat_excess','soil','lateral', &
           'pump_allo','pump_ext','tile','reservoir','wetland', &
-          'floodplain','canal','pond','phytorem'
+          'floodplain','canal','pond','phytorem','pump_unmet'
       endif
 
 
@@ -1238,7 +1238,7 @@
               gw_hyd_ss(i)%tile, gw_hyd_ss(i)%resv, &
               gw_hyd_ss(i)%wetl, gw_hyd_ss(i)%fpln, &
               gw_hyd_ss(i)%canl, gw_hyd_ss(i)%pond, &
-              gw_hyd_ss(i)%phyt
+              gw_hyd_ss(i)%phyt, gw_hyd_ss(i)%ppdf
           endif
         enddo
       endif
@@ -1247,10 +1247,10 @@
       !--- HRU pumping daily long-format output ---
       if(gwflag_pump == 1) then
         do i=1,sp_ob%hru
-          if(hru_pump(i) > 0.) then
+          if(hru_pump_dmd(i) > 0.) then
             iob = sp_ob1%hru + i - 1
             write(out_hru_pump_day,8101) time%day,time%mo,time%day_mo, &
-              time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump(i)
+              time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump(i),hru_pump_dmd(i),hru_pump_unmet(i)
           endif
         enddo
       endif
@@ -1258,9 +1258,9 @@
       !format statements (subroutine-local)
 119   format(i8,i8,i8,1000(f12.3))
 130   format(i8,i8,1000(e13.4))
-140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,16e13.4)
+140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,17e13.4)
 8100  format(4i6,2a,2x,a16,f10.3,50e13.4)
-8101  format(4i6,2i8,a18,e13.4)
+8101  format(4i6,2i8,a18,3e13.4)
 8102  format(4i6,2i8,a18,5e13.4)
 
       return
@@ -1324,14 +1324,16 @@
         !pumping (irrigation) (for HRUs) -- monthly long-format output ----------------
         if(gwflag_pump == 1) then
           do i=1,sp_ob%hru
-            if(hru_pump_mo(i) > 0.) then
+            if(hru_pump_dmd_mo(i) > 0.) then
               iob = sp_ob1%hru + i - 1
               write(out_hru_pump_mo,8101) time%day,time%mo,time%day_mo, &
-                time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump_mo(i)
+                time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump_mo(i),hru_pump_dmd_mo(i),hru_pump_unmet_mo(i)
             endif
           enddo
         endif
         hru_pump_mo = 0.
+        hru_pump_dmd_mo = 0.
+        hru_pump_unmet_mo = 0.
 
         !compute average daily groundwater fluxes (m3/day) for the month ----------------
         do i=1,ncell
@@ -1373,7 +1375,7 @@
                 gw_hyd_ss_mo(i)%tile, gw_hyd_ss_mo(i)%resv, &
                 gw_hyd_ss_mo(i)%wetl, gw_hyd_ss_mo(i)%fpln, &
                 gw_hyd_ss_mo(i)%canl, gw_hyd_ss_mo(i)%pond, &
-                gw_hyd_ss_mo(i)%phyt
+                gw_hyd_ss_mo(i)%phyt, gw_hyd_ss_mo(i)%ppdf
             endif
           enddo
         endif
@@ -1525,9 +1527,9 @@
       endif !end_mo
 
       !format statements (subroutine-local)
-140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,16e13.4)
+140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,17e13.4)
 8100  format(4i6,2a,2x,a16,50e13.4)
-8101  format(4i6,2i8,a18,e13.4)
+8101  format(4i6,2i8,a18,3e13.4)
 8102  format(4i6,2i8,a18,5e13.4)
 
       return
@@ -1630,7 +1632,7 @@
               gw_hyd_ss_yr(i)%tile, gw_hyd_ss_yr(i)%resv, &
               gw_hyd_ss_yr(i)%wetl, gw_hyd_ss_yr(i)%fpln, &
               gw_hyd_ss_yr(i)%canl, gw_hyd_ss_yr(i)%pond, &
-              gw_hyd_ss_yr(i)%phyt
+              gw_hyd_ss_yr(i)%phyt, gw_hyd_ss_yr(i)%ppdf
           endif
         enddo
       endif
@@ -1654,6 +1656,7 @@
         gw_hyd_ss_aa(i)%canl = gw_hyd_ss_aa(i)%canl + gw_hyd_ss_yr(i)%canl
         gw_hyd_ss_aa(i)%pond = gw_hyd_ss_aa(i)%pond + gw_hyd_ss_yr(i)%pond
         gw_hyd_ss_aa(i)%phyt = gw_hyd_ss_aa(i)%phyt + gw_hyd_ss_yr(i)%phyt
+        gw_hyd_ss_aa(i)%ppdf = gw_hyd_ss_aa(i)%ppdf + gw_hyd_ss_yr(i)%ppdf
       enddo
 
       !--- obs well yearly output + AA accumulation ---
@@ -1738,18 +1741,22 @@
       !pumping (irrigation) (for HRUs) -- yearly long-format output ----------------------
       if(gwflag_pump == 1) then
         do i=1,sp_ob%hru
-          if(hru_pump_yr(i) > 0.) then
+          if(hru_pump_dmd_yr(i) > 0.) then
             iob = sp_ob1%hru + i - 1
             write(out_hru_pump_yr,8101) time%day,time%mo,time%day_mo, &
-              time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump_yr(i)
+              time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump_yr(i),hru_pump_dmd_yr(i),hru_pump_unmet_yr(i)
           endif
         enddo
       endif
       !accumulate into AA before zeroing
       do i=1,sp_ob%hru
         hru_pump_aa(i) = hru_pump_aa(i) + hru_pump_yr(i)
+        hru_pump_dmd_aa(i) = hru_pump_dmd_aa(i) + hru_pump_dmd_yr(i)
+        hru_pump_unmet_aa(i) = hru_pump_unmet_aa(i) + hru_pump_unmet_yr(i)
       enddo
       hru_pump_yr = 0.
+      hru_pump_dmd_yr = 0.
+      hru_pump_unmet_yr = 0.
 
       !(individual grid-file writes per flux component removed -- replaced by long-format above)
 
@@ -1940,9 +1947,9 @@
       endif
 
       !format statements (subroutine-local)
-140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,16e13.4)
+140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,17e13.4)
 8100  format(4i6,2a,2x,a16,50e13.4)
-8101  format(4i6,2i8,a18,e13.4)
+8101  format(4i6,2i8,a18,3e13.4)
 8102  format(4i6,2i8,a18,5e13.4)
 
       return
@@ -1988,10 +1995,11 @@
       !pumping for HRUs -- average annual long-format output
       if(gwflag_pump == 1) then
         do i=1,sp_ob%hru
-          if(hru_pump_aa(i) > 0.) then
+          if(hru_pump_dmd_aa(i) > 0.) then
             iob = sp_ob1%hru + i - 1
             write(out_hru_pump_aa,8101) time%day,time%mo,time%day_mo, &
-              time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump_aa(i)/nbyr_r
+              time%yrc,i,ob(iob)%gis_id,ob(iob)%name,hru_pump_aa(i)/nbyr_r, &
+              hru_pump_dmd_aa(i)/nbyr_r,hru_pump_unmet_aa(i)/nbyr_r
           endif
         enddo
       endif
@@ -2042,7 +2050,7 @@
               gw_hyd_ss_aa(i)%fpln / nbyr_r, &
               gw_hyd_ss_aa(i)%canl / nbyr_r, &
               gw_hyd_ss_aa(i)%pond / nbyr_r, &
-              gw_hyd_ss_aa(i)%phyt / nbyr_r
+              gw_hyd_ss_aa(i)%phyt / nbyr_r, gw_hyd_ss_aa(i)%ppdf / nbyr_r
           endif
         enddo
       endif
@@ -2174,9 +2182,9 @@
 
       !format statements (subroutine-local)
 105   format(i8,1000(e13.4))
-140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,16e13.4)
+140   format(i8,i6,i6,i8,i8,i10,4x,a12,2f13.3,17e13.4)
 8100  format(4i6,2a,2x,a16,50e13.4)
-8101  format(4i6,2i8,a18,e13.4)
+8101  format(4i6,2i8,a18,3e13.4)
 8102  format(4i6,2i8,a18,5e13.4)
 
       return

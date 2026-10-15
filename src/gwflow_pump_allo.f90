@@ -1,463 +1,257 @@
-      subroutine gwflow_pump_allo(ob_id_dmd,demand_vol,extracted,dmd_unmet) !rtb gwflow
+      subroutine gwflow_pump_allo(ob_id_dmd,ob_id_src,demand_vol,extracted,dmd_unmet) !rtb gwflow
 
 !!    ~ ~ ~ PURPOSE ~ ~ ~
-!!    this subroutine determines the volume of groundwater that is extracted
-!!    from gwflow grid cells
-!!    (pumping volume are used in gwflow_simulate, in groundwater balance equations)
-!!    adapted for swatplusGW water allocation (4-arg call from wallo_withdraw)
+!!    this subroutine removes groundwater from gwflow grid cells to meet an irrigation demand
+!!    (called from actions (irrigate from "gwf") and wallo_withdraw (POD type "gwf");
+!!    the pumped volumes are used in gwflow_simulate, in the groundwater balance equations)
+!!
+!!    source cells:
+!!      ob_id_src = 0  the cells intersected by HRU ob_id_dmd, with the demand split by intersected area
+!!      ob_id_src > 0  that one cell (cell id as numbered in the gwflow input)
+!!    each cell supplies at most its unconfined storage, (head - bottom) * area * Sy, less the pumping
+!!    already taken from it on the same day; demand left unmet after the first split is taken from the
+!!    cells that still have storage, in proportion to that storage
+!!    delivered and unmet volumes are summed per HRU (hru_pump, hru_pump_unmet, demand in hru_pump_dmd)
+!!    and per cell (gw_hyd_ss%ppag, gw_hyd_ss%ppdf)
 
       use gwflow_module
       use organic_mineral_mass_module, only : soil1
-      use hru_module, only : hru,irrn,irrp
-      use hydrograph_module, only : wet,ob
-      use soil_module, only : soil
+      use hru_module, only : hru
+      use hydrograph_module, only : wet
       use constituent_mass_module
       use res_salt_module, only : wetsalt_d
       use res_cs_module, only : wetcs_d
       use salt_module, only : hsaltb_d
       use cs_module, only : hcsb_d
 
-
       implicit none
 
-      integer, intent (in) :: ob_id_dmd     !       |object that has a water demand (HRU ID)
+      integer, intent (in) :: ob_id_dmd     !       |HRU with the demand (0 = no HRU, e.g. water allocation without HRUs)
+      integer, intent (in) :: ob_id_src     !       |source cell (0 = cells intersected by the HRU)
       real, intent (in) :: demand_vol       !m3     |volume of water demand
-      real, intent (inout) :: extracted     !m3     |volume of groundwater extracted from aquifer for irrigation
-      real, intent (inout) :: dmd_unmet     !m3     |volume of irrigation demand not met by aquifer
-      integer :: ob_id_src = 0              !       |source object (0 = HRU self-supply)
-      character*4 :: demand_type = "hru"    !       |demand type (default: HRU irrigation)
-      integer :: i = 0                      !       |counter
-      integer :: s = 0                      !       |solute counter
-      integer :: cell_id = 0                !       |gwflow cell
-      integer :: wetland = 0                !       |wetland flag
-      integer :: isalt = 0                  !       |salt ion counter
-      integer :: ics = 0                    !       |constituent counter
-      integer :: sol_index = 0
-      integer :: hru_id = 0
-      real :: cell_demand = 0.              !m3     |volume of irrigation water demand per gwflow cell
-      real :: gwvol_avail = 0.              !m3     |groundwater storage in the gwflow cell
-      real :: gwvol_removed = 0.            !m3     |groundwater removed from the gwflow cell for irrigation demand
-      real :: gwvol_unmet = 0.              !m3     |groundwater not available to meet irrigation demand
-      real :: gw_mass = 0.                  !kg     |mass of solute in groundwater of the gwflow cell
-      real :: irr_mass(100) = 0.            !kg     |mass of solute removed from aquifer for irrigation
-      real :: mass_diff = 0.                !kg     |difference between irrigation mass and actual groundwater mass
-      real :: sum_pump = 0.                 !m3     |total pumping for the HRU
-      real :: hru_area_m2 = 0.              !m2     |HRU area
-      real :: heat_flux = 0.                !J      |heat flux in pumped groundwater
-      real :: soil_volm = 0.                !m3     |volume of soil water in soil layer
-      real :: soil_heat = 0.                !J      |heat in soil water of soil layer
+      real, intent (inout) :: extracted     !m3     |volume of groundwater extracted from the aquifer
+      real, intent (inout) :: dmd_unmet     !m3     |volume of demand not met by the aquifer
+      integer :: i                          !       |counter
+      integer :: ncl                        !       |number of source cells
+      integer :: cell_id                    !       |gwflow cell
+      integer, dimension (:), allocatable :: cells  !    |source cells
+      real, dimension (:), allocatable :: wts       !    |fraction of the demand assigned to each cell
+      real, dimension (:), allocatable :: avail     !m3  |groundwater available in each cell
+      real, dimension (:), allocatable :: req       !m3  |demand assigned to each cell
+      real, dimension (:), allocatable :: removed   !m3  |groundwater removed from each cell
+      real :: sum_wts                       !       |sum of the intersected area fractions
+      real :: remaining                     !m3     |demand not met after the first split
+      real :: spare                         !m3     |storage left in all cells after the first split
+      real :: add                           !m3     |volume added to a cell
+      real :: shortfall                     !m3     |sum of cell shortfalls (assigned demand - removed)
 
-
-      !zero out the total met and unmet demand
       extracted = 0.
       dmd_unmet = 0.
+      if (demand_vol <= 0.) return
 
-
-      !first option: hru irrigation from all cells geographically connected to the hru
-      !hru demand --> irrigation ------------------------------------------------------------------------------------------------
-      if(demand_type == "hru" .and. ob_id_src == 0) then
-
-      !only proceed if the HRU is connected (intersected with) gwflow grid cells
-      sum_pump = 0.
-      hru_id = ob_id_dmd
-			if(hru_num_cells(hru_id) > 0) then
-
-        !groundwater volume to remove from each cell connected to the HRU
-        cell_demand = demand_vol / hru_num_cells(hru_id) !groundwater to remove from each cell connected to the HRU
-
-        !loop through the cells that are connected to the HRU
-        do i=1,hru_num_cells(hru_id)
-
-          !id of the current cell
-          cell_id = hru_cells(hru_id,i)
-
-          !check for available groundwater in the cell
-          if(gw_state(cell_id)%head > gw_state(cell_id)%botm) then !if water table is above bedrock
-            gwvol_avail = ((gw_state(cell_id)%head-gw_state(cell_id)%botm) * gw_state(cell_id)%area) * gw_state(cell_id)%spyd !m3
-				  else
-            gwvol_avail = 0.
-          endif
-
-          !remove irrigation demand from storage; if storage is less than demand, remove all groundwater
-          gwvol_removed = 0.
-          gwvol_unmet = 0.
-          if(gwvol_avail < cell_demand) then
-            gwvol_removed = gwvol_avail
-            gwvol_unmet = cell_demand - gwvol_avail !amount that is not available for irrigation
-          else
-            gwvol_removed = cell_demand
-          endif
-          extracted = extracted + gwvol_removed
-          dmd_unmet = dmd_unmet + gwvol_unmet
-
-          !save the pumping volume (m3), for use in gwflow_simulate
-          gw_hyd_ss(cell_id)%ppag = gwvol_removed * (-1) !m3 negative = leaving the aquifer
-          gw_hyd_ss_yr(cell_id)%ppag = gw_hyd_ss_yr(cell_id)%ppag + (gwvol_removed * (-1)) !store for annual water
-          gw_hyd_ss_mo(cell_id)%ppag = gw_hyd_ss_mo(cell_id)%ppag + (gwvol_removed * (-1)) !store for monthly water
-
-          !sum the pumping for the current HRU
-          sum_pump = sum_pump + gwvol_removed
-
-          !save the unsatisfied pumping volume (m3), for output
-          gw_hyd_ss(cell_id)%ppdf = gwvol_unmet
-          gw_hyd_ss_yr(cell_id)%ppdf = gw_hyd_ss_yr(cell_id)%ppdf + gwvol_unmet
-
-          !add heat in irrigation water to soil profile
-          if(gw_heat_flag == 1) then
-            !remove heat from groundwater
-            heat_flux = gwheat_state(cell_id)%temp * gw_rho * gw_cp * gwvol_removed !J
-            if(heat_flux >= gwheat_state(cell_id)%stor) then
-              heat_flux = gwheat_state(cell_id)%stor
-            endif
-            gw_heat_ss(cell_id)%ppag = heat_flux * (-1)
-            gw_heat_ss_yr(cell_id)%ppag = gw_heat_ss_yr(cell_id)%ppag + heat_flux * (-1)
-          endif
-
-          !add solute mass in irrigation water to HRU soil profile
-          !(mass is removed from the aquifer via mass balance equation in gwflow_simulate.f)
-          if (gw_solute_flag == 1) then
-            !determine the mass (kg) removed for irrigation water
-            do s=1,gw_nsolute !loop through the solutes
-              gw_mass = gwsol_state(cell_id)%solute(s)%mass / 1000. !kg in cell
-              irr_mass(s) = (gwsol_state(cell_id)%solute(s)%conc * gwvol_removed) / 1000. !kg removed in irrigation water
-              mass_diff = 0.
-              if(irr_mass(s).gt.gw_mass) then
-                mass_diff = irr_mass(s) - gw_mass
-              endif
-              irr_mass(s) = irr_mass(s) - mass_diff
-              if(irr_mass(s).lt.0) irr_mass(s) = 0.
-            enddo
-            !add solute mass to soil profile of demand object (hru)
-            wetland = hru(hru_id)%dbs%surf_stor !check if HRU is a wetland
-            if(wetland > 0) then !add to wetland
-              !nutrients
-              wet(hru_id)%no3 = wet(hru_id)%no3 + irr_mass(1) !kg
-              wet(hru_id)%solp = wet(hru_id)%solp + irr_mass(2) !kg
-              sol_index = 2
-              !salts
-              if (gwsol_salt == 1) then
-                do isalt=1,cs_db%num_salts
-                  sol_index = sol_index + 1
-                  wet_water(hru_id)%salt(isalt) = wet_water(hru_id)%salt(isalt) + irr_mass(sol_index) !kg
-                  wetsalt_d(hru_id)%salt(isalt)%irrig = wetsalt_d(hru_id)%salt(isalt)%irrig + irr_mass(sol_index) !kg
-                enddo
-              endif
-              !constituents
-              if (gwsol_cons == 1) then
-                do ics=1,cs_db%num_cs
-                  sol_index = sol_index + 1
-                  wet_water(hru_id)%cs(ics) = wet_water(hru_id)%cs(ics) + irr_mass(sol_index) !kg
-                  wetcs_d(hru_id)%cs(ics)%irrig = wetcs_d(hru_id)%cs(ics)%irrig + irr_mass(sol_index) !kg
-                enddo
-              endif
-            else !add to soil profile
-              !nutrients
-              soil1(hru_id)%mn(1)%no3 = soil1(hru_id)%mn(1)%no3 + (irr_mass(1)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-              soil1(hru_id)%mp(1)%lab = soil1(hru_id)%mp(1)%lab + (irr_mass(2)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-              sol_index = 2
-              !salts
-              if (gwsol_salt == 1) then
-                do isalt=1,cs_db%num_salts
-                  sol_index = sol_index + 1
-                  cs_soil(hru_id)%ly(1)%salt(isalt) = cs_soil(hru_id)%ly(1)%salt(isalt) + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-                  hsaltb_d(hru_id)%salt(isalt)%irgw = hsaltb_d(hru_id)%salt(isalt)%irgw + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - include in soil salt balance
-                enddo
-              endif
-              !constituents
-              if (gwsol_cons == 1) then
-                do ics=1,cs_db%num_cs
-                  sol_index = sol_index + 1
-                  cs_soil(hru_id)%ly(1)%cs(ics) = cs_soil(hru_id)%ly(1)%cs(ics) + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-                  hcsb_d(hru_id)%cs(ics)%irgw = hcsb_d(hru_id)%cs(ics)%irgw + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - include in soil constituent balance
-                enddo
-              endif
-            endif
-            !add to mass balance arrays (to be used in gwflow_simulate)
-            do s=1,gw_nsolute !loop through the solutes
-              gwsol_ss(cell_id)%solute(s)%ppag = (irr_mass(s)*1000.) * (-1) !g; negative = leaving the aquifer
-              gwsol_ss_sum(cell_id)%solute(s)%ppag = gwsol_ss_sum(cell_id)%solute(s)%ppag - (irr_mass(s)*1000.)
-							gwsol_ss_sum_mo(cell_id)%solute(s)%ppag = gwsol_ss_sum_mo(cell_id)%solute(s)%ppag - (irr_mass(s)*1000.)
-            enddo
-          endif
-
-        enddo !go to next gwflow cell
-
-			endif
-      hru_pump(hru_id) = sum_pump !store pumping (m3) for the HRU
-
-
-
-			!irrigation pumping from a single cell ------------------------------------------------------------------------------------
-			elseif(demand_type == "hru" .and. ob_id_src > 0) then
-
-			  hru_id = ob_id_dmd
-			  sum_pump = 0.
-        cell_demand = demand_vol !m3 groundwater volume to remove from the cell
-        if(grid_type == "structured") then
-          cell_id = cell_id_list(ob_id_src)
-        endif
-
-        !check for available groundwater in the cell
-        if(gw_state(cell_id)%head > gw_state(cell_id)%botm) then !if water table is above bedrock
-          gwvol_avail = ((gw_state(cell_id)%head-gw_state(cell_id)%botm) * gw_state(cell_id)%area) * gw_state(cell_id)%spyd !m3
-				else
-          gwvol_avail = 0.
-        endif
-
-        !remove irrigation demand from storage; if storage is less than demand, remove all groundwater
-        gwvol_removed = 0.
-        gwvol_unmet = 0.
-        if(gwvol_avail < cell_demand) then
-          gwvol_removed = gwvol_avail
-          gwvol_unmet = cell_demand - gwvol_avail !amount that is not available for irrigation
+      !source cells and the fraction of the demand assigned to each
+      ncl = 0
+      if (ob_id_src > 0) then
+        ncl = 1
+        allocate (cells(1), wts(1))
+        if (grid_type == "structured") then
+          cells(1) = cell_id_list(ob_id_src)
         else
-          gwvol_removed = cell_demand
+          cells(1) = ob_id_src
         endif
-        extracted = extracted + gwvol_removed
-        dmd_unmet = dmd_unmet + gwvol_unmet
-
-        !save the pumping volume (m3), for use in gwflow_simulate
-        gw_hyd_ss(cell_id)%ppag = gwvol_removed * (-1) !m3 negative = leaving the aquifer
-        gw_hyd_ss_yr(cell_id)%ppag = gw_hyd_ss_yr(cell_id)%ppag + (gwvol_removed * (-1)) !store for annual water
-        gw_hyd_ss_mo(cell_id)%ppag = gw_hyd_ss_mo(cell_id)%ppag + (gwvol_removed * (-1)) !store for monthly water
-
-        !sum the pumping for the current HRU
-        sum_pump = sum_pump + gwvol_removed
-
-        !save the unsatisfied pumping volume (m3), for output
-        gw_hyd_ss(cell_id)%ppdf = gwvol_unmet
-        gw_hyd_ss_yr(cell_id)%ppdf = gw_hyd_ss_yr(cell_id)%ppdf + gwvol_unmet
-
-        !add heat in irrigation water to soil profile
-        if(gw_heat_flag == 1) then
-          !remove heat from groundwater
-          heat_flux = gwheat_state(cell_id)%temp * gw_rho * gw_cp * gwvol_removed !J
-          if(heat_flux >= gwheat_state(cell_id)%stor) then
-            heat_flux = gwheat_state(cell_id)%stor
+        wts(1) = 1.
+      elseif (ob_id_dmd > 0 .and. allocated(hru_num_cells)) then
+        !active cells only (inactive and boundary cells are not pumped)
+        allocate (cells(hru_num_cells(ob_id_dmd)), wts(hru_num_cells(ob_id_dmd)))
+        do i = 1, hru_num_cells(ob_id_dmd)
+          cell_id = hru_cells(ob_id_dmd,i)
+          if (cell_id <= 0) cycle
+          if (gw_state(cell_id)%stat /= 1) cycle
+          ncl = ncl + 1
+          cells(ncl) = cell_id
+          wts(ncl) = hru_cells_fract(ob_id_dmd,i)
+        enddo
+        if (ncl > 0) then
+          sum_wts = sum(wts(1:ncl))
+          if (sum_wts > 0.) then
+            wts(1:ncl) = wts(1:ncl) / sum_wts
+          else
+            wts(1:ncl) = 1. / real(ncl)
           endif
-          gw_heat_ss(cell_id)%ppag = heat_flux * (-1)
-          gw_heat_ss_yr(cell_id)%ppag = gw_heat_ss_yr(cell_id)%ppag + heat_flux * (-1)
+        endif
+      endif
+      if (ob_id_src > 0) then
+        if (cells(1) <= 0) then
+          ncl = 0
+        elseif (gw_state(cells(1))%stat /= 1) then
+          ncl = 0
+        endif
+      endif
+
+      !no connected active cells: the whole demand is unmet (recorded for the HRU only)
+      if (ncl == 0) then
+        dmd_unmet = demand_vol
+        call gwflow_pump_hru_sum
+        return
+      endif
+
+      allocate (avail(ncl), req(ncl), removed(ncl))
+
+      !groundwater available in each cell (storage less the pumping already taken today; ppag is negative)
+      do i = 1, ncl
+        cell_id = cells(i)
+        avail(i) = 0.
+        if (cell_id > 0) then
+          if (gw_state(cell_id)%stat == 1 .and. gw_state(cell_id)%head > gw_state(cell_id)%botm) then
+            avail(i) = (gw_state(cell_id)%head - gw_state(cell_id)%botm) * gw_state(cell_id)%area * &
+                       gw_state(cell_id)%spyd + gw_hyd_ss(cell_id)%ppag
+            avail(i) = max(0., avail(i))
+          endif
+        endif
+      enddo
+
+      !first split by intersected area
+      do i = 1, ncl
+        req(i) = demand_vol * wts(i)
+        removed(i) = min(req(i), avail(i))
+      enddo
+
+      !second split: unmet demand from the cells that still have storage
+      remaining = demand_vol - sum(removed)
+      spare = sum(avail - removed)
+      if (remaining > 0. .and. spare > 0.) then
+        add = min(remaining, spare)
+        do i = 1, ncl
+          removed(i) = removed(i) + add * (avail(i) - removed(i)) / spare
+          removed(i) = min(removed(i), avail(i))
+        enddo
+      endif
+
+      extracted = sum(removed)
+      dmd_unmet = max(0., demand_vol - extracted)
+
+      !remove the water (and its heat and solutes) from each cell
+      shortfall = 0.
+      do i = 1, ncl
+        shortfall = shortfall + max(0., req(i) - removed(i))
+      enddo
+      do i = 1, ncl
+        cell_id = cells(i)
+        if (cell_id <= 0) cycle
+        call gwflow_pump_cell (cell_id, removed(i))
+        !unmet demand by cell, in proportion to each cell's shortfall
+        if (dmd_unmet > 0. .and. shortfall > 0.) then
+          add = dmd_unmet * max(0., req(i) - removed(i)) / shortfall
+          gw_hyd_ss(cell_id)%ppdf = gw_hyd_ss(cell_id)%ppdf + add
+          gw_hyd_ss_mo(cell_id)%ppdf = gw_hyd_ss_mo(cell_id)%ppdf + add
+          gw_hyd_ss_yr(cell_id)%ppdf = gw_hyd_ss_yr(cell_id)%ppdf + add
+        endif
+      enddo
+
+      call gwflow_pump_hru_sum
+
+      return
+
+      contains
+
+      !sum the demand, pumping and unmet demand for the HRU
+      subroutine gwflow_pump_hru_sum
+        if (ob_id_dmd > 0) then
+          hru_pump(ob_id_dmd) = hru_pump(ob_id_dmd) + extracted
+          hru_pump_dmd(ob_id_dmd) = hru_pump_dmd(ob_id_dmd) + demand_vol
+          hru_pump_unmet(ob_id_dmd) = hru_pump_unmet(ob_id_dmd) + dmd_unmet
+        endif
+      end subroutine gwflow_pump_hru_sum
+
+      !remove a volume of groundwater from one cell, with its heat and solute mass;
+      !the solute mass goes to the soil (or wetland) of the HRU
+      subroutine gwflow_pump_cell (icell, vol)
+        integer, intent (in) :: icell       !       |gwflow cell
+        real, intent (in) :: vol            !m3     |groundwater removed
+        integer :: s                        !       |solute counter
+        integer :: isalt                    !       |salt ion counter
+        integer :: ics                      !       |constituent counter
+        integer :: sol_index                !       |solute index
+        integer :: wetland                  !       |wetland flag
+        real :: heat_flux                   !J      |heat in pumped groundwater
+        real :: gw_mass                     !kg     |solute mass left in the cell today
+        real :: irr_mass(100)               !kg     |solute mass removed in the pumped water
+
+        if (vol <= 0.) return
+
+        !pumping volume (m3, negative = leaving the aquifer), for gwflow_simulate and output
+        gw_hyd_ss(icell)%ppag = gw_hyd_ss(icell)%ppag - vol
+        gw_hyd_ss_mo(icell)%ppag = gw_hyd_ss_mo(icell)%ppag - vol
+        gw_hyd_ss_yr(icell)%ppag = gw_hyd_ss_yr(icell)%ppag - vol
+
+        !heat removed with the pumped water
+        if (gw_heat_flag == 1) then
+          heat_flux = gwheat_state(icell)%temp * gw_rho * gw_cp * vol !J
+          heat_flux = min(heat_flux, gwheat_state(icell)%stor + gw_heat_ss(icell)%ppag)
+          heat_flux = max(0., heat_flux)
+          gw_heat_ss(icell)%ppag = gw_heat_ss(icell)%ppag - heat_flux
+          gw_heat_ss_yr(icell)%ppag = gw_heat_ss_yr(icell)%ppag - heat_flux
         endif
 
-        !add solute mass in irrigation water to HRU soil profile
-        !(mass is removed from the aquifer via mass balance equation in gwflow_simulate.f)
+        !solute mass removed with the pumped water
+        !(mass is removed from the aquifer via the mass balance equation in gwflow_simulate)
         if (gw_solute_flag == 1) then
-          !determine the mass (kg) removed for irrigation water
-          do s=1,gw_nsolute !loop through the solutes
-            gw_mass = gwsol_state(cell_id)%solute(s)%mass / 1000. !kg in cell
-            irr_mass(s) = (gwsol_state(cell_id)%solute(s)%conc * gwvol_removed) / 1000. !kg removed in irrigation water
-            mass_diff = 0.
-            if(irr_mass(s).gt.gw_mass) then
-              mass_diff = irr_mass(s) - gw_mass
-            endif
-            irr_mass(s) = irr_mass(s) - mass_diff
-            if(irr_mass(s).lt.0) irr_mass(s) = 0.
+          irr_mass = 0.
+          do s = 1, gw_nsolute
+            gw_mass = (gwsol_state(icell)%solute(s)%mass + gwsol_ss(icell)%solute(s)%ppag) / 1000. !kg
+            irr_mass(s) = (gwsol_state(icell)%solute(s)%conc * vol) / 1000. !kg
+            irr_mass(s) = min(irr_mass(s), gw_mass)
+            irr_mass(s) = max(0., irr_mass(s))
+            gwsol_ss(icell)%solute(s)%ppag = gwsol_ss(icell)%solute(s)%ppag - irr_mass(s) * 1000. !g
+            gwsol_ss_sum(icell)%solute(s)%ppag = gwsol_ss_sum(icell)%solute(s)%ppag - irr_mass(s) * 1000.
+            gwsol_ss_sum_mo(icell)%solute(s)%ppag = gwsol_ss_sum_mo(icell)%solute(s)%ppag - irr_mass(s) * 1000.
           enddo
-          !add solute mass to soil profile of demand object (hru)
-          wetland = hru(hru_id)%dbs%surf_stor !check if HRU is a wetland
-          if(wetland > 0) then !add to wetland
-            !nutrients
-            wet(hru_id)%no3 = wet(hru_id)%no3 + irr_mass(1) !kg
-            wet(hru_id)%solp = wet(hru_id)%solp + irr_mass(2) !kg
-            sol_index = 2
-            !salts
-            if (gwsol_salt == 1) then
-              do isalt=1,cs_db%num_salts
-                sol_index = sol_index + 1
-                wet_water(hru_id)%salt(isalt) = wet_water(hru_id)%salt(isalt) + irr_mass(sol_index) !kg
-                wetsalt_d(hru_id)%salt(isalt)%irrig = wetsalt_d(hru_id)%salt(isalt)%irrig + irr_mass(sol_index) !kg
-              enddo
-            endif
-            !constituents
-            if (gwsol_cons == 1) then
-              do ics=1,cs_db%num_cs
-                sol_index = sol_index + 1
-                wet_water(hru_id)%cs(ics) = wet_water(hru_id)%cs(ics) + irr_mass(sol_index) !kg
-                wetcs_d(hru_id)%cs(ics)%irrig = wetcs_d(hru_id)%cs(ics)%irrig + irr_mass(sol_index) !kg
-              enddo
-            endif
-          else !add to soil profile
-            !nutrients
-            soil1(hru_id)%mn(1)%no3 = soil1(hru_id)%mn(1)%no3 + (irr_mass(1)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-            soil1(hru_id)%mp(1)%lab = soil1(hru_id)%mp(1)%lab + (irr_mass(2)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-            sol_index = 2
-            !salts
-            if (gwsol_salt == 1) then
-              do isalt=1,cs_db%num_salts
-                sol_index = sol_index + 1
-                cs_soil(hru_id)%ly(1)%salt(isalt) = cs_soil(hru_id)%ly(1)%salt(isalt) + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-                hsaltb_d(hru_id)%salt(isalt)%irgw = hsaltb_d(hru_id)%salt(isalt)%irgw + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - include in soil salt balance
-              enddo
-            endif
-            !constituents
-            if (gwsol_cons == 1) then
-              do ics=1,cs_db%num_cs
-                sol_index = sol_index + 1
-                cs_soil(hru_id)%ly(1)%cs(ics) = cs_soil(hru_id)%ly(1)%cs(ics) + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - add to soil layer
-                hcsb_d(hru_id)%cs(ics)%irgw = hcsb_d(hru_id)%cs(ics)%irgw + (irr_mass(sol_index)/hru(hru_id)%area_ha) !kg/ha - include in soil constituent balance
-              enddo
-            endif
-          endif
-          !add to mass balance arrays (to be used in gwflow_simulate)
-          do s=1,gw_nsolute !loop through the solutes
-            gwsol_ss(cell_id)%solute(s)%ppag = (irr_mass(s)*1000.) * (-1) !g; negative = leaving the aquifer
-            gwsol_ss_sum(cell_id)%solute(s)%ppag = gwsol_ss_sum(cell_id)%solute(s)%ppag - (irr_mass(s)*1000.)
-						gwsol_ss_sum_mo(cell_id)%solute(s)%ppag = gwsol_ss_sum_mo(cell_id)%solute(s)%ppag - (irr_mass(s)*1000.)
-          enddo
-        endif
-        hru_pump(hru_id) = sum_pump !store pumping (m3) for the HRU
-
-
-
-			!municipal demand from all cells connected geographically to the hru ------------------------------------------------------
-			elseif(demand_type == "muni" .and. ob_id_src == 0) then
-
-			hru_id = ob_id_dmd
-      if(hru_num_cells(hru_id) > 0) then
-
-        !groundwater volume to remove from each cell connected to the HRU
-        cell_demand = demand_vol / hru_num_cells(hru_id) !groundwater to remove from each cell connected to the HRU
-
-        !loop through the cells that are connected to the HRU
-        do i=1,hru_num_cells(hru_id)
-
-          !id of the current cell
-          cell_id = hru_cells(hru_id,i)
-
-          !check for available groundwater in the cell
-          if(gw_state(cell_id)%head > gw_state(cell_id)%botm) then !if water table is above bedrock
-            gwvol_avail = ((gw_state(cell_id)%head-gw_state(cell_id)%botm) * gw_state(cell_id)%area) * gw_state(cell_id)%spyd !m3
-				  else
-            gwvol_avail = 0.
-          endif
-
-          !remove irrigation demand from storage; if storage is less than demand, remove all groundwater
-          gwvol_removed = 0.
-          gwvol_unmet = 0.
-          if(gwvol_avail < cell_demand) then
-            gwvol_removed = gwvol_avail
-            gwvol_unmet = cell_demand - gwvol_avail !amount that is not available for irrigation
-          else
-            gwvol_removed = cell_demand
-          endif
-          extracted = extracted + gwvol_removed
-          dmd_unmet = dmd_unmet + gwvol_unmet
-
-          !save the pumping volume (m3), for use in gwflow_simulate
-          gw_hyd_ss(cell_id)%ppex = gwvol_removed * (-1) !m3 negative = leaving the aquifer
-          gw_hyd_ss_yr(cell_id)%ppex = gw_hyd_ss_yr(cell_id)%ppex + (gwvol_removed * (-1)) !store for annual water
-          gw_hyd_ss_mo(cell_id)%ppex = gw_hyd_ss_mo(cell_id)%ppex + (gwvol_removed * (-1)) !store for monthly water
-
-          !save the unsatisfied pumping volume (m3), for output
-          gw_hyd_ss(cell_id)%ppdf = gwvol_unmet
-          gw_hyd_ss_yr(cell_id)%ppdf = gw_hyd_ss_yr(cell_id)%ppdf + gwvol_unmet
-
-          !remove heat from aquifer
-          if(gw_heat_flag == 1) then
-            heat_flux = gwheat_state(cell_id)%temp * gw_rho * gw_cp * gwvol_removed !J
-            if(heat_flux >= gwheat_state(cell_id)%stor) then
-              heat_flux = gwheat_state(cell_id)%stor
-            endif
-            gw_heat_ss(cell_id)%ppex = heat_flux * (-1)
-            gw_heat_ss_yr(cell_id)%ppex = gw_heat_ss_yr(cell_id)%ppex + heat_flux * (-1)
-          endif
-
-          !determine solute mass to be from the aquifer via mass balance equation (in gwflow_simulate.f)
-          if (gw_solute_flag == 1) then
-            !determine the mass (kg) removed for irrigation water
-            do s=1,gw_nsolute !loop through the solutes
-              gw_mass = gwsol_state(cell_id)%solute(s)%mass / 1000. !kg in cell
-              irr_mass(s) = (gwsol_state(cell_id)%solute(s)%conc * gwvol_removed) / 1000. !kg removed in irrigation water
-              mass_diff = 0.
-              if(irr_mass(s).gt.gw_mass) then
-                mass_diff = irr_mass(s) - gw_mass
+          if (ob_id_dmd > 0) then
+            wetland = hru(ob_id_dmd)%dbs%surf_stor
+            if (wetland > 0) then !add to wetland
+              wet(ob_id_dmd)%no3 = wet(ob_id_dmd)%no3 + irr_mass(1) !kg
+              wet(ob_id_dmd)%solp = wet(ob_id_dmd)%solp + irr_mass(2) !kg
+              sol_index = 2
+              if (gwsol_salt == 1) then
+                do isalt = 1, cs_db%num_salts
+                  sol_index = sol_index + 1
+                  wet_water(ob_id_dmd)%salt(isalt) = wet_water(ob_id_dmd)%salt(isalt) + irr_mass(sol_index) !kg
+                  wetsalt_d(ob_id_dmd)%salt(isalt)%irrig = wetsalt_d(ob_id_dmd)%salt(isalt)%irrig + irr_mass(sol_index)
+                enddo
               endif
-              irr_mass(s) = irr_mass(s) - mass_diff
-              if(irr_mass(s).lt.0) irr_mass(s) = 0.
-            enddo
-            !add to mass balance arrays (to be used in gwflow_simulate)
-            do s=1,gw_nsolute !loop through the solutes
-              gwsol_ss(cell_id)%solute(s)%ppex = (irr_mass(s)*1000.) * (-1) !g; negative = leaving the aquifer
-              gwsol_ss_sum(cell_id)%solute(s)%ppex = gwsol_ss_sum(cell_id)%solute(s)%ppex - (irr_mass(s)*1000.)
-							gwsol_ss_sum_mo(cell_id)%solute(s)%ppex = gwsol_ss_sum_mo(cell_id)%solute(s)%ppex - (irr_mass(s)*1000.)
-            enddo
-          endif
-
-        enddo !go to next gwflow cell
-
-			endif
-
-
-
-			!municipal demand from a single cell --------------------------------------------------------------------------------------
-			elseif(demand_type == "muni" .and. ob_id_src > 0) then
-
-        cell_demand = demand_vol !m3 groundwater volume to remove from the cell
-        if(grid_type == "structured") then
-          cell_id = cell_id_list(ob_id_src)
-        endif
-
-        !check for available groundwater in the cell
-        if(gw_state(cell_id)%head > gw_state(cell_id)%botm) then !if water table is above bedrock
-          gwvol_avail = ((gw_state(cell_id)%head-gw_state(cell_id)%botm) * gw_state(cell_id)%area) * gw_state(cell_id)%spyd !m3
-				else
-          gwvol_avail = 0.
-        endif
-
-        !remove irrigation demand from storage; if storage is less than demand, remove all groundwater
-        gwvol_removed = 0.
-        gwvol_unmet = 0.
-        if(gwvol_avail < cell_demand) then
-          gwvol_removed = gwvol_avail
-          gwvol_unmet = cell_demand - gwvol_avail !amount that is not available for irrigation
-        else
-          gwvol_removed = cell_demand
-        endif
-        extracted = extracted + gwvol_removed
-        dmd_unmet = dmd_unmet + gwvol_unmet
-
-        !save the pumping volume (m3), for use in gwflow_simulate
-        gw_hyd_ss(cell_id)%ppex = gwvol_removed * (-1) !m3 negative = leaving the aquifer
-        gw_hyd_ss_yr(cell_id)%ppex = gw_hyd_ss_yr(cell_id)%ppex + (gwvol_removed * (-1)) !store for annual water
-        gw_hyd_ss_mo(cell_id)%ppex = gw_hyd_ss_mo(cell_id)%ppex + (gwvol_removed * (-1)) !store for monthly water
-
-        !save the unsatisfied pumping volume (m3), for output
-        gw_hyd_ss(cell_id)%ppdf = gwvol_unmet
-        gw_hyd_ss_yr(cell_id)%ppdf = gw_hyd_ss_yr(cell_id)%ppdf + gwvol_unmet
-
-        !remove heat from aquifer
-        if(gw_heat_flag == 1) then
-          !remove heat from groundwater
-          heat_flux = gwheat_state(cell_id)%temp * gw_rho * gw_cp * gwvol_removed !J
-          if(heat_flux >= gwheat_state(cell_id)%stor) then
-            heat_flux = gwheat_state(cell_id)%stor
-          endif
-          gw_heat_ss(cell_id)%ppex = heat_flux * (-1)
-          gw_heat_ss_yr(cell_id)%ppex = gw_heat_ss_yr(cell_id)%ppex + heat_flux * (-1)
-        endif
-
-        !determine solute mass to be from the aquifer via mass balance equation (in gwflow_simulate.f)
-        if(gw_solute_flag == 1) then
-          !determine the mass (kg) removed by pumping
-          do s=1,gw_nsolute !loop through the solutes
-            gw_mass = gwsol_state(cell_id)%solute(s)%mass / 1000. !kg in cell
-            irr_mass(s) = (gwsol_state(cell_id)%solute(s)%conc * gwvol_removed) / 1000. !kg removed in irrigation water
-            mass_diff = 0.
-            if(irr_mass(s).gt.gw_mass) then
-              mass_diff = irr_mass(s) - gw_mass
+              if (gwsol_cons == 1) then
+                do ics = 1, cs_db%num_cs
+                  sol_index = sol_index + 1
+                  wet_water(ob_id_dmd)%cs(ics) = wet_water(ob_id_dmd)%cs(ics) + irr_mass(sol_index) !kg
+                  wetcs_d(ob_id_dmd)%cs(ics)%irrig = wetcs_d(ob_id_dmd)%cs(ics)%irrig + irr_mass(sol_index)
+                enddo
+              endif
+            else !add to the top soil layer (kg/ha)
+              soil1(ob_id_dmd)%mn(1)%no3 = soil1(ob_id_dmd)%mn(1)%no3 + (irr_mass(1)/hru(ob_id_dmd)%area_ha)
+              soil1(ob_id_dmd)%mp(1)%lab = soil1(ob_id_dmd)%mp(1)%lab + (irr_mass(2)/hru(ob_id_dmd)%area_ha)
+              sol_index = 2
+              if (gwsol_salt == 1) then
+                do isalt = 1, cs_db%num_salts
+                  sol_index = sol_index + 1
+                  cs_soil(ob_id_dmd)%ly(1)%salt(isalt) = cs_soil(ob_id_dmd)%ly(1)%salt(isalt) + &
+                    (irr_mass(sol_index)/hru(ob_id_dmd)%area_ha)
+                  hsaltb_d(ob_id_dmd)%salt(isalt)%irgw = hsaltb_d(ob_id_dmd)%salt(isalt)%irgw + &
+                    (irr_mass(sol_index)/hru(ob_id_dmd)%area_ha)
+                enddo
+              endif
+              if (gwsol_cons == 1) then
+                do ics = 1, cs_db%num_cs
+                  sol_index = sol_index + 1
+                  cs_soil(ob_id_dmd)%ly(1)%cs(ics) = cs_soil(ob_id_dmd)%ly(1)%cs(ics) + &
+                    (irr_mass(sol_index)/hru(ob_id_dmd)%area_ha)
+                  hcsb_d(ob_id_dmd)%cs(ics)%irgw = hcsb_d(ob_id_dmd)%cs(ics)%irgw + &
+                    (irr_mass(sol_index)/hru(ob_id_dmd)%area_ha)
+                enddo
+              endif
             endif
-            irr_mass(s) = irr_mass(s) - mass_diff
-            if(irr_mass(s).lt.0) irr_mass(s) = 0.
-          enddo
-          !add to mass balance arrays
-          do s=1,gw_nsolute !loop through the solutes
-            gwsol_ss(cell_id)%solute(s)%ppex = (irr_mass(s)*1000.) * (-1) !g; negative = leaving the aquifer
-            gwsol_ss_sum(cell_id)%solute(s)%ppex = gwsol_ss_sum(cell_id)%solute(s)%ppex - (irr_mass(s)*1000.)
-						gwsol_ss_sum_mo(cell_id)%solute(s)%ppex = gwsol_ss_sum_mo(cell_id)%solute(s)%ppex - (irr_mass(s)*1000.)
-          enddo
+          endif
         endif
 
-			endif !check: hru or muni
-
+      end subroutine gwflow_pump_cell
 
       end subroutine gwflow_pump_allo

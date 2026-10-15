@@ -106,11 +106,15 @@
       !gwflow_soil called in swr_percmain
 
       !groundwater pumping (irrigation) ---------------------------------------
-      !gwflow_ppag called in wallo_withdraw
+      !gwflow_pump_allo called in actions (irrigate from gwf) and wallo_withdraw (POD type gwf)
       !track and print out pumping for HRUs
       do i=1,sp_ob%hru
         hru_pump_mo(i) = hru_pump_mo(i) + hru_pump(i)
         hru_pump_yr(i) = hru_pump_yr(i) + hru_pump(i)
+        hru_pump_dmd_mo(i) = hru_pump_dmd_mo(i) + hru_pump_dmd(i)
+        hru_pump_dmd_yr(i) = hru_pump_dmd_yr(i) + hru_pump_dmd(i)
+        hru_pump_unmet_mo(i) = hru_pump_unmet_mo(i) + hru_pump_unmet(i)
+        hru_pump_unmet_yr(i) = hru_pump_unmet_yr(i) + hru_pump_unmet(i)
       enddo
       if(hru_pump_flag == 1 .and. gwflag_pump == 1) then
         do i=1,num_hru_pump_obs
@@ -119,7 +123,7 @@
         write(out_hru_pump_obs,119) time%yrc,time%day, &
                                    (hru_pump_obs(i),i=1,num_hru_pump_obs)
       endif
-      hru_pump = 0.
+      !(hru_pump is zeroed with the other daily fluxes, after the daily output)
 
       !groundwater pumping (external use) -------------------------------------
       call gwflow_pump_ext
@@ -478,6 +482,10 @@
 
 
       !10. zero out flux arrays for next day
+      !HRU pumping (after the daily output) --------------
+      hru_pump = 0.
+      hru_pump_dmd = 0.
+      hru_pump_unmet = 0.
       !flow -----------------------------------------------
       do i=1,ncell
         gw_hyd_ss(i)%rech = 0.
