@@ -93,8 +93,6 @@
       real :: p_factor = 0.
       real :: cn_prev = 0.
       real :: stor_m3 = 0.
-      integer :: ly_bd = 0         !none          |soil layer for bd_update (0 = all layers)
-      integer :: ios_bd = 0        !none          |read status of the bd_update layer
       real :: gw_pumped = 0.       !m3            |groundwater pumped from gwflow for irrigation
       real :: gw_unmet = 0.        !m3            |irrigation demand not met by gwflow storage
       character(len=1) :: action = ""      !         |
@@ -1290,24 +1288,20 @@
             pcom(j)%dtbl(idtbl)%num_actions(iac) = pcom(j)%dtbl(idtbl)%num_actions(iac) + 1
 
           !update soil bulk density, keeping layer soil water
-          !option = change type (absval, abschg, pctchg), const = value, const2 = max number of times,
+          !option = change type (absval, abschg, pctchg), const = value, const2 = max number of times per year,
           !file_pointer = layer number ("all", "null" or "0" = every layer)
           case ("bd_update")
             j = d_tbl%act(iac)%ob_num
             if (j == 0) j = ob_cur
 
             if (pcom(j)%dtbl(idtbl)%num_actions(iac) <= Int(d_tbl%act(iac)%const2)) then
-              ly_bd = 0
-              if (d_tbl%act(iac)%file_pointer /= "all" .and. d_tbl%act(iac)%file_pointer /= "null") then
-                read (d_tbl%act(iac)%file_pointer,*,iostat=ios_bd) ly_bd
-                if (ios_bd /= 0) ly_bd = 0
-              end if
-              call soil_bd_update (j, ly_bd, d_tbl%act(iac)%option, d_tbl%act(iac)%const, "bd_update")
+              call soil_bd_update (j, d_tbl%act(iac)%file_pointer, d_tbl%act(iac)%option, d_tbl%act(iac)%const,  &
+                                   "bd_update", d_tbl%act(iac)%name)
               if (pco%mgtout == "y") then
                 ipl = 1
                 write (2612, *) j, time%yrc, time%mo, time%day_mo, d_tbl%act(iac)%name, "    BDUP", phubase(j),    &
                   pcom(j)%plcur(ipl)%phuacc, soil(j)%sw, pl_mass(j)%tot(ipl)%m, pl_mass(j)%rsd_tot%m,       &
-                  sol_sumno3(j), sol_sumsolp(j), ly_bd, d_tbl%act(iac)%const
+                  sol_sumno3(j), sol_sumsolp(j), trim(d_tbl%act(iac)%file_pointer), d_tbl%act(iac)%const
               end if
             end if
 
