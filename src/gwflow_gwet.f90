@@ -39,7 +39,8 @@
           do j=1,lsu_out(k)%num_tot
             hru_id = lsu_out(k)%num(j)
             ob_num = sp_ob1%hru + hru_id - 1
-            hru_gwet_volume = (etremain(hru_id)/1000.) * (ob(ob_num)%area_ha * 10000.) !m * m2 = m3
+            !remaining ET is pet - et and is negative when et exceeds pet; no groundwater ET then
+            hru_gwet_volume = (max(0., etremain(hru_id))/1000.) * (ob(ob_num)%area_ha * 10000.) !m * m2 = m3
             lsu_gwet_volume = lsu_gwet_volume + hru_gwet_volume !m3
           enddo
           !map remaining ET from LSU to grid cells connected to the LSU
@@ -88,7 +89,8 @@
         do i=1,hru_num_cells(k)
           !potential ET for this cell: the HRU's remaining ET times the cell's fraction of the HRU area
           !(each cell on its own, so the result does not depend on the order of the HRU's cells)
-          max_gwet = etremain(k) * hru_cells_fract(k,i) !mm
+          !(remaining ET is pet - et and is negative when et exceeds pet; no groundwater ET then)
+          max_gwet = max(0., etremain(k)) * hru_cells_fract(k,i) !mm
           cell_id = hru_cells(k,i)
           et_surface = gw_state(cell_id)%elev !ground surface
           et_bottom = et_surface - gw_state(cell_id)%exdp !lower elevation bound for ET to occur
