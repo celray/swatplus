@@ -291,7 +291,8 @@
             if (ob(icmd)%rcv_tot > 0) call hyddep_output
 
           case ("gwflow")   ! gwflow
-            call gwflow_simulate
+            !! diagnostic build: the gwflow solve runs once after the command loop (below), so every
+            !! object's recharge, pumping, groundwater ET and exchange for the day enter that day's solve
             do i_mfl = 1,sp_ob%gwflow
               icmd = icmd + 1
             enddo
@@ -433,6 +434,9 @@
         icmd = ob(icmd)%cmd_next
         
       end do
+
+      !! diagnostic build: gwflow solve after every object of the day has run
+      if (sp_ob%gwflow > 0) call gwflow_simulate
 
       !! write object output for entire simulation
       call obj_output
