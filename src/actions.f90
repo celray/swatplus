@@ -95,6 +95,9 @@
       real :: stor_m3 = 0.
       real :: gw_pumped = 0.       !m3            |groundwater pumped from gwflow for irrigation
       real :: gw_unmet = 0.        !m3            |irrigation demand not met by gwflow storage
+      real :: irr_applied_prev = 0.  !mm          |irrigation applied earlier on the day
+      real :: irr_runoff_prev = 0.   !mm          |irrigation runoff earlier on the day
+      real :: irr_demand_prev = 0.   !m3          |irrigation demand earlier on the day
       character(len=1) :: action = ""      !         |
       character(len=40) :: lu_prev = ""    !         |
       character(len=40) :: snow_prev = ""  !         |
@@ -249,6 +252,10 @@
             if (pcom(j)%dtbl(idtbl)%num_actions(iac) <= Int(d_tbl%act(iac)%const2)) then
             isrc = d_tbl%act(iac)%ob_num    ! source object type number
             irrop = d_tbl%act_typ(iac)      ! irrigation application type in irr.ops
+            !! irrigation already applied today by earlier actions; this action's amounts are added to it below
+            irr_applied_prev = irrig(j)%applied
+            irr_runoff_prev = irrig(j)%runoff
+            irr_demand_prev = irrig(j)%demand
 
             if (d_tbl%act(iac)%name=='ponding') then !paddy irrigation
               hru(j)%irr_hmax = d_tbl%act(iac)%const !mm
@@ -357,6 +364,12 @@
                     sol_sumno3(j), sol_sumsolp(j), irrig(j)%applied
               end if
             endif
+
+            !! add this action to the irrigation applied earlier today, so several actions on one day
+            !! all reach the soil (the source withdrawals above are already summed by source)
+            irrig(j)%applied = irr_applied_prev + irrig(j)%applied
+            irrig(j)%runoff = irr_runoff_prev + irrig(j)%runoff
+            irrig(j)%demand = irr_demand_prev + irrig(j)%demand
             
               pcom(j)%dtbl(idtbl)%num_actions(iac) = pcom(j)%dtbl(idtbl)%num_actions(iac) + 1
               pcom(j)%dtbl(idtbl)%days_act(iac) = 1                     !reset days since last action

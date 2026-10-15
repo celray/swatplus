@@ -178,6 +178,9 @@
       real :: single_value = 0.
       integer :: max_num = 0
       integer :: max_cells = 0
+      integer :: hru_rows = 0                     !       |hrucell.gw rows read for an HRU in one block
+      integer :: ncell_in = 0                     !       |number of cell ids that can appear in hrucell.gw
+      integer, dimension (:), allocatable :: hru_rows_first !    |hrucell.gw rows per HRU in the whole file
       integer :: wb_cell = 0
       real :: group_area = 0.
       !split-format file readers (gwflow.codes/zones/cells/cellcons/outputs)
@@ -2150,6 +2153,8 @@
         hru_num_cells(hru_id) = hru_num_cells(hru_id) + 1
       enddo
       max_cells = maxval(hru_num_cells(1:sp_ob%hru))
+      allocate(hru_rows_first(sp_ob%hru))
+      hru_rows_first = hru_num_cells
       !rewind to start and re-read headers
       rewind(in_hru_cell)
       read(in_hru_cell,*)
@@ -2165,9 +2170,23 @@
         if(hrus_connected(k).eq.1) then
         hru_id = k
         cell_count = 0
+        hru_rows = 0
         do while (hru_id.eq.k)
           cell_count = cell_count + 1
+          hru_rows = hru_rows + 1
           read(in_hru_cell,*) hru_id,hru_area,hru_cells(k,cell_count),poly_area
+          !cell id must be in range before it is used as an index
+          if(grid_type == "structured") then
+            ncell_in = size(cell_id_list)
+          else
+            ncell_in = ncell
+          endif
+          if(hru_cells(k,cell_count) < 1 .or. hru_cells(k,cell_count) > ncell_in) then
+            write(*,'(a,i0,a,i0,a,i0)') 'Error: hrucell.gw row for HRU ', k, ' has cell id ', &
+              hru_cells(k,cell_count), ' outside 1 to ', ncell_in
+            print *
+            error stop
+          endif
           if(grid_type == "structured") then
             if(cell_id_list(hru_cells(k,cell_count)) > 0) then
               hru_cells(k,cell_count) = cell_id_list(hru_cells(k,cell_count))
@@ -2184,6 +2203,24 @@
           backspace(in_hru_cell)
         enddo
 10      hru_num_cells(k) = cell_count
+        !all rows of an HRU must be together (the rows are read in blocks of one HRU)
+        if(hru_rows /= hru_rows_first(k)) then
+          write(*,'(a,i0,a,i0,a,i0,a)') 'Error: hrucell.gw rows for HRU ', k, ' are not together (', &
+            hru_rows, ' read in one block, ', hru_rows_first(k), ' in the file); sort the file by HRU'
+          print *
+          error stop
+        endif
+        !each HRU-cell pair once
+        do i=1,cell_count
+          do j=i+1,cell_count
+            if(hru_cells(k,i) == hru_cells(k,j)) then
+              write(*,'(a,i0,a,i0,a)') 'Error: hrucell.gw lists HRU ', k, ' and cell ', hru_cells(k,i), &
+                ' more than once'
+              print *
+              error stop
+            endif
+          enddo
+        enddo
         endif
       enddo
 
