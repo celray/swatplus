@@ -23,6 +23,8 @@
       real :: exp_co = 0.       !                   |exponent for ppet - leaf turnover equation
       real :: lai_init = 0.     !                   |lai before senescence
       real :: lai_drop = 0.     !                   |lai decline due to senescence
+      real :: lai_floor = 0.    !m**2/m**2          |lai at the end of senescence
+      real :: pl_lai_min_evg    !m**2/m**2          |winter lai floor of an evergreen perennial
       
       j = ihru
       idp = pcom(j)%plcur(ipl)%idplt
@@ -52,7 +54,7 @@
       end if
       
       !! lai decline for temperature based perennials
-      if (pldb(idp)%typ == "perennial" .and. pldb(idp)%trig == "temp_gro") then
+      if (pldb(idp)%typ == "perennial" .and. (pldb(idp)%trig == "temp_gro" .or. pldb(idp)%trig == "temp_gro_evg")) then
         if (pcom(j)%plcur(ipl)%phuacc > pldb(idp)%dlai .and. pcom(j)%plg(ipl)%d_senes < 15.) then
           iob = hru(j)%obj_no
           iwst = ob(iob)%wst
@@ -60,8 +62,14 @@
           !! use 15 day senescence period
           pcom(j)%plg(ipl)%d_senes = pcom(j)%plg(ipl)%d_senes + 1.
           rto = 1. - (pcom(j)%plg(ipl)%d_senes / 15.)     !! assume 15 day senescence and leaf drop
-          pcom(j)%plg(ipl)%lai = (pcom(j)%plg(ipl)%olai - pldb(idp)%alai_min) * rto + pldb(idp)%alai_min
-          pcom(j)%plg(ipl)%lai = max (pcom(j)%plg(ipl)%lai, pldb(idp)%alai_min)
+          if (pldb(idp)%trig == "temp_gro_evg") then
+            !! evergreen declines to the age-limited lai_min and is never raised above its pre-senescence lai
+            lai_floor = min(pl_lai_min_evg(j, ipl), pcom(j)%plg(ipl)%olai)
+          else
+            lai_floor = pldb(idp)%alai_min
+          end if
+          pcom(j)%plg(ipl)%lai = (pcom(j)%plg(ipl)%olai - lai_floor) * rto + lai_floor
+          pcom(j)%plg(ipl)%lai = max (pcom(j)%plg(ipl)%lai, lai_floor)
           !! logistic decline rate - Strauch and Volk
           !pcom(j)%plg(ipl)%lai = (pcom(j)%plg(ipl)%olai - pldb(idp)%alai_min) /   &
           !      (1. + Exp((rto - .5) * (-12))) + pldb(idp)%alai_min

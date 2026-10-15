@@ -18,6 +18,7 @@
       integer :: iwgn = 0           !              |
       real :: rto = 0.              !              |
       real :: lai_init = 0.         !
+      real :: pl_lai_min_evg        !m**2/m**2     |winter lai floor of an evergreen perennial
 
       j = ihru
       idp = pcom(j)%plcur(ipl)%idplt
@@ -36,7 +37,12 @@
           stem_drop = rto * pl_mass(j)%stem(ipl)
           !! lower lai by same ratio
           lai_init = pcom(j)%plg(ipl)%lai
-          pcom(j)%plg(ipl)%lai = rto * lai_init
+          if (pldb(idp)%trig == "temp_gro_evg") then
+            !! evergreen keeps a winter canopy at lai_min (limited by stand age), never above its current lai
+            pcom(j)%plg(ipl)%lai = min(lai_init, pl_lai_min_evg(j, ipl))
+          else
+            pcom(j)%plg(ipl)%lai = rto * lai_init
+          end if
           !! compute leaf biomass drop
           leaf_drop%m = rto * pl_mass(j)%leaf(ipl)%m
           leaf_drop%n = leaf_drop%m * pcom(j)%plm(ipl)%n_fr

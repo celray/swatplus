@@ -38,6 +38,7 @@
         character(len=18) :: trig = ""   !none              |phenology trigger
                                          !                  |moisture_gro
                                          !                  |temp_gro
+                                         !                  |temp_gro_evg (evergreen: temp_gro dormancy, keeps lai_min in winter)
         real :: nfix_co = 0.             !none              |n fixation coefficient (0.5 legume; 0 non-legume)
         integer :: days_mat = 110        !days              |days to maturity - if zero use hu for entire growing season
         real :: bio_e = 15.0             !(kg/ha/(MJ/m**2)  |biomass-energy ratio

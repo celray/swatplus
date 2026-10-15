@@ -31,7 +31,7 @@
         !! check for start and end of dormancy of temp-based growth plant
         if (pcom(j)%plcur(ipl)%gro == "y") then
             idp = pcom(j)%plcur(ipl)%idplt
-            if (pldb(idp)%trig == "temp_gro") then
+            if (pldb(idp)%trig == "temp_gro" .or. pldb(idp)%trig == "temp_gro_evg") then
               call pl_dormant
             end if
         end if
