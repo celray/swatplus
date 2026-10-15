@@ -257,6 +257,8 @@
       real, dimension (:), allocatable :: hru_pump_unmet_mo !m3         |monthly accumulator
       real, dimension (:), allocatable :: hru_pump_unmet_yr !m3         |yearly accumulator
       real, dimension (:), allocatable :: hru_pump_unmet_aa !m3         |average annual accumulator (sum of yearly totals)
+      integer :: gw_solve_date = 0                          !yyyyddd    |date of the last gwflow solve (to detect pumping after it)
+      logical, dimension (:), allocatable :: hru_pump_late  !           |HRU already warned for pumping after the day's solve
       !logical :: hru_pump_flag !           |
       integer :: hru_pump_flag = 0
       integer :: in_hru_pump_obs = 0                        !           |

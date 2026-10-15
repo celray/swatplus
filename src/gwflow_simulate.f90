@@ -481,6 +481,9 @@
 
 
 
+      !date of this solve; HRU pumping later on the same day is solved on the next day (see actions)
+      gw_solve_date = time%yrc * 1000 + time%day
+
       !10. zero out flux arrays for next day
       !HRU pumping (after the daily output) --------------
       hru_pump = 0.

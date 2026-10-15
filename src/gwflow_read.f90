@@ -178,9 +178,9 @@
       real :: single_value = 0.
       integer :: max_num = 0
       integer :: max_cells = 0
-      integer :: hru_rows = 0                     !       |hrucell.gw rows read for an HRU in one block
       integer :: ncell_in = 0                     !       |number of cell ids that can appear in hrucell.gw
-      integer, dimension (:), allocatable :: hru_rows_first !    |hrucell.gw rows per HRU in the whole file
+      integer :: cell_in = 0                      !       |cell id as written in hrucell.gw
+      integer :: nrow = 0                         !       |hrucell.gw data row
       integer :: wb_cell = 0
       real :: group_area = 0.
       !split-format file readers (gwflow.codes/zones/cells/cellcons/outputs)
@@ -909,6 +909,8 @@
                hru_pump_unmet_aa(sp_ob%hru))
       hru_pump_dmd = 0.; hru_pump_dmd_mo = 0.; hru_pump_dmd_yr = 0.; hru_pump_dmd_aa = 0.
       hru_pump_unmet = 0.; hru_pump_unmet_mo = 0.; hru_pump_unmet_yr = 0.; hru_pump_unmet_aa = 0.
+      allocate(hru_pump_late(sp_ob%hru))
+      hru_pump_late = .false.
       if(gwflag_pump == 1) then
         open(out_hru_pump_day,file='gwflow_hru_pump_day.txt')
         write(out_hru_pump_day,*) 'gwflow HRU pumping for irrigation (m3/day)'
@@ -2132,6 +2134,8 @@
       else !LSU-cell connection not present; proceed with HRU-cell connection
 
       !HRU-cell connection (new format: meta line + column header + data rows; no HRU-id list section)
+      !rows: hru, hru area (m2), cell, overlap area (m2), in any order; every row is checked in the
+      !first pass before anything is stored, and each HRU-cell pair may appear once
       write(out_gw,*) '          HRU-cell connections (gwflow.hrucell)'
       open(in_hru_cell,file='hrucell.gw')
       read(in_hru_cell,*)                          !meta line
@@ -2140,89 +2144,87 @@
       hrus_connected = 0
       allocate(hru_num_cells(sp_ob%hru))
       hru_num_cells = 0
-      !first pass: scan all data rows to derive hrus_connected and per-HRU cell counts
+      if(grid_type == "structured") then
+        ncell_in = size(cell_id_list)
+      else
+        ncell_in = ncell
+      endif
+      !first pass: check every row and count the connected cells of each HRU
       nhru_connected = 0
+      nrow = 0
       do
-        read(in_hru_cell,*,iostat=eof) hru_id
-        if(eof /= 0) exit
-        if(hru_id < 1 .or. hru_id > sp_ob%hru) cycle
+        read(in_hru_cell,*,iostat=eof) hru_id,hru_area,cell_in,poly_area
+        if(eof < 0) exit
+        nrow = nrow + 1
+        if(eof > 0) then
+          write(*,'(a,i0,a)') 'Error: hrucell.gw data row ', nrow, ' cannot be read (hru, hru_area, cell_id, overlap_area)'
+          print *
+          error stop
+        endif
+        if(hru_id < 1 .or. hru_id > sp_ob%hru) then
+          write(*,'(a,i0,a,i0,a,i0)') 'Error: hrucell.gw data row ', nrow, ' has HRU ', hru_id, ' outside 1 to ', sp_ob%hru
+          print *
+          error stop
+        endif
+        if(cell_in < 1 .or. cell_in > ncell_in) then
+          write(*,'(a,i0,a,i0,a,i0)') 'Error: hrucell.gw data row ', nrow, ' has cell id ', cell_in, ' outside 1 to ', ncell_in
+          print *
+          error stop
+        endif
+        if(hru_area <= 0. .or. poly_area < 0.) then
+          write(*,'(a,i0,a)') 'Error: hrucell.gw data row ', nrow, ' has an HRU area <= 0 or a negative overlap area'
+          print *
+          error stop
+        endif
+        cell_id = cell_in
+        if(grid_type == "structured") cell_id = cell_id_list(cell_in)
+        if(cell_id <= 0) cycle                     !structured cell outside the active grid: not connected
         if(hrus_connected(hru_id) == 0) then
           hrus_connected(hru_id) = 1
           nhru_connected = nhru_connected + 1
         endif
         hru_num_cells(hru_id) = hru_num_cells(hru_id) + 1
       enddo
+      if(nhru_connected == 0) then
+        write(*,'(a)') 'Error: hrucell.gw has no HRU-cell connections'
+        print *
+        error stop
+      endif
       max_cells = maxval(hru_num_cells(1:sp_ob%hru))
-      allocate(hru_rows_first(sp_ob%hru))
-      hru_rows_first = hru_num_cells
-      !rewind to start and re-read headers
-      rewind(in_hru_cell)
-      read(in_hru_cell,*)
-      read(in_hru_cell,*)
-      !second pass: allocate with exact max and fill arrays
+      !second pass: fill the arrays (sized from the first-pass counts, so a row cannot be stored out of bounds)
       allocate(hru_cells(sp_ob%hru,max_cells))
       allocate(hru_cells_fract(sp_ob%hru,max_cells))
       allocate(cells_fract(sp_ob%hru,max_cells))
-      hru_num_cells = 0
       hru_cells = 0
       hru_cells_fract = 0.
-      do k=1,sp_ob%hru
-        if(hrus_connected(k).eq.1) then
-        hru_id = k
-        cell_count = 0
-        hru_rows = 0
-        do while (hru_id.eq.k)
-          cell_count = cell_count + 1
-          hru_rows = hru_rows + 1
-          read(in_hru_cell,*) hru_id,hru_area,hru_cells(k,cell_count),poly_area
-          !cell id must be in range before it is used as an index
-          if(grid_type == "structured") then
-            ncell_in = size(cell_id_list)
-          else
-            ncell_in = ncell
-          endif
-          if(hru_cells(k,cell_count) < 1 .or. hru_cells(k,cell_count) > ncell_in) then
-            write(*,'(a,i0,a,i0,a,i0)') 'Error: hrucell.gw row for HRU ', k, ' has cell id ', &
-              hru_cells(k,cell_count), ' outside 1 to ', ncell_in
+      cells_fract = 0.
+      hru_num_cells = 0
+      rewind(in_hru_cell)
+      read(in_hru_cell,*)
+      read(in_hru_cell,*)
+      nrow = 0
+      do
+        read(in_hru_cell,*,iostat=eof) hru_id,hru_area,cell_in,poly_area
+        if(eof /= 0) exit
+        nrow = nrow + 1
+        cell_id = cell_in
+        if(grid_type == "structured") cell_id = cell_id_list(cell_in)
+        if(cell_id <= 0) cycle
+        do i=1,hru_num_cells(hru_id)
+          if(hru_cells(hru_id,i) == cell_id) then
+            write(*,'(a,i0,a,i0,a,i0,a)') 'Error: hrucell.gw data row ', nrow, ' repeats HRU ', hru_id, &
+              ' and cell ', cell_in, ' (each pair once)'
             print *
             error stop
           endif
-          if(grid_type == "structured") then
-            if(cell_id_list(hru_cells(k,cell_count)) > 0) then
-              hru_cells(k,cell_count) = cell_id_list(hru_cells(k,cell_count))
-              hru_cells_fract(k,cell_count) = poly_area / hru_area !fraction of HRU area
-              cells_fract(k,cell_count) = poly_area / gw_state(hru_cells(k,cell_count))%area !fraction of cell area
-            else
-              cell_count = cell_count - 1
-            endif
-          else
-            hru_cells_fract(k,cell_count) = poly_area / hru_area !fraction of HRU area
-            cells_fract(k,cell_count) = poly_area / gw_state(hru_cells(k,cell_count))%area !fraction of cell area
-          endif
-          read(in_hru_cell,*,end=10) hru_id
-          backspace(in_hru_cell)
         enddo
-10      hru_num_cells(k) = cell_count
-        !all rows of an HRU must be together (the rows are read in blocks of one HRU)
-        if(hru_rows /= hru_rows_first(k)) then
-          write(*,'(a,i0,a,i0,a,i0,a)') 'Error: hrucell.gw rows for HRU ', k, ' are not together (', &
-            hru_rows, ' read in one block, ', hru_rows_first(k), ' in the file); sort the file by HRU'
-          print *
-          error stop
-        endif
-        !each HRU-cell pair once
-        do i=1,cell_count
-          do j=i+1,cell_count
-            if(hru_cells(k,i) == hru_cells(k,j)) then
-              write(*,'(a,i0,a,i0,a)') 'Error: hrucell.gw lists HRU ', k, ' and cell ', hru_cells(k,i), &
-                ' more than once'
-              print *
-              error stop
-            endif
-          enddo
-        enddo
-        endif
+        cell_count = hru_num_cells(hru_id) + 1
+        hru_num_cells(hru_id) = cell_count
+        hru_cells(hru_id,cell_count) = cell_id
+        hru_cells_fract(hru_id,cell_count) = poly_area / hru_area !fraction of HRU area
+        cells_fract(hru_id,cell_count) = poly_area / gw_state(cell_id)%area !fraction of cell area
       enddo
+      close(in_hru_cell)
 
       endif !check for LSU-cell connection
 

@@ -2,6 +2,7 @@
       use conditional_module
       use climate_module
       use time_module
+      use gwflow_module, only : gw_solve_date, hru_pump_late, out_gw
       use aquifer_module
       use hru_module, only : hru, cn2, fertno3, fertnh3, fertorgn, fertorgp, fertsolp,   &
         ihru, ipl, isol,  phubase, sol_sumno3, sol_sumsolp, qtile, snodb
@@ -331,6 +332,14 @@
             !pumping is limited by cell storage and the applied depth is reduced by the unmet fraction
             case ("gwf")
               if (bsn_cc%gwflow == 1) then
+                !! the hru runs after the gwflow object in the command order: its pumping is solved the next day
+                if (gw_solve_date == time%yrc * 1000 + time%day .and. .not. hru_pump_late(j)) then
+                  hru_pump_late(j) = .true.
+                  write (*,'(a,i0,a,i0,a,i0,a)') " Warning: HRU ", j, " irrigates from gwf after the gwflow solve (day ",   &
+                    time%day, " of ", time%yrc, "); its pumping is solved the next day, and not at all on the last day"
+                  write (out_gw,'(a,i0,a,i0,a,i0,a)') " Warning: HRU ", j, " irrigates from gwf after the gwflow solve (day ", &
+                    time%day, " of ", time%yrc, "); its pumping is solved the next day, and not at all on the last day"
+                end if
                 call gwflow_pump_allo (j, iob, irrig(j)%demand, gw_pumped, gw_unmet)
               else
                 gw_pumped = 0.
