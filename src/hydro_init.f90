@@ -67,6 +67,7 @@
       real :: hlat = 0.
       real :: daylength = 0.
       real :: rock = 0.
+      real :: pl_lai_min_evg        !m**2/m**2     |winter lai floor of an evergreen perennial
 
       do j = 1, sp_ob%hru
        ihru = j
@@ -118,6 +119,10 @@
       do ipl = 1, pcom(j)%npl
         if (pcom(j)%plcur(ipl)%gro == "y" .and. daylength - dormhr(j) < wgn_pms(iwgn)%daylmn) then
           pcom(j)%plcur(ipl)%idorm = "y"
+          !! an evergreen starting dormant gets the winter canopy of pl_dormant
+          if (pldb(pcom(j)%plcur(ipl)%idplt)%trig == "temp_gro_evg") then
+            pcom(j)%plg(ipl)%lai = min(pcom(j)%plg(ipl)%lai, pl_lai_min_evg(j, ipl))
+          end if
         else
           pcom(j)%plcur(ipl)%idorm = "n"
         end if

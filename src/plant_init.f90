@@ -1,6 +1,6 @@
       subroutine plant_init (init, iihru)
 
-      use hru_module, only : cvm_com, hru, ipl
+      use hru_module, only : cvm_com, hru, ipl, dormhr
       use soil_module
       use plant_module
       use hydrograph_module
@@ -27,6 +27,7 @@
       integer :: j = 0               !none       |counter
       integer :: iob = 0             !           |spatial object number
       integer :: iwgn = 0            !           |weather generator number
+      real :: pl_lai_min_evg         !m**2/m**2  |winter lai floor of an evergreen perennial
       integer :: mo = 0              !none       |counter 
       integer :: iday = 0            !none       |counter 
       integer :: icp = 0             !none       |counter 
@@ -354,6 +355,18 @@
             call pl_seed_gro(j)
             call pl_partition(j, 1)
             call pl_rootfr(j)
+          end if
+
+          !! an evergreen started during a run in its dormant season gets the winter canopy of pl_dormant;
+          !! masses are set above from the initial lai, so only lai changes (at the start of the
+          !! simulation dormancy is set in hydro_init, which applies the same rule)
+          if (init == 1 .and. pldb(idp)%trig == "temp_gro_evg" .and. pcom(j)%plcur(ipl)%gro == "y") then
+            iob = hru(j)%obj_no
+            iwst = ob(iob)%wst
+            iwgn = wst(iwst)%wco%wgn
+            if (wst(iwst)%weat%daylength - dormhr(j) < wgn_pms(iwgn)%daylmn) then
+              pcom(j)%plg(ipl)%lai = min(pcom(j)%plg(ipl)%lai, pl_lai_min_evg(j, ipl))
+            end if
           end if
 
         end do   ! ipl loop
