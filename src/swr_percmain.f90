@@ -71,7 +71,9 @@
       if (ires==0) then
         sepday = inflpcp + irrig(j)%applied + ht1%flo / (hru(j)%area_ha * 10.)
       else
-        sepday = inflpcp + ht1%flo / (hru(j)%area_ha * 10.)
+        !! wetland: surface runon goes into the wetland (hru_control) and reaches the soil only
+        !! through wetland seepage (inflpcp), so it is not added here as well
+        sepday = inflpcp
       endif
       
       !hru(j)%water_seep = 0.

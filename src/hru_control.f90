@@ -271,9 +271,15 @@
         if (ob(icmd)%hin_sur%flo > 1.e-6) then
           !!route incoming surface runoff
           if (ires > 0) then
-            !! add surface runon to wetland
+            !! add surface runon to wetland - command converts the incoming hydrographs to a per area
+            !! basis (flo mm, constituents kg/ha); wet is in m3 and kg, so convert back to volume and mass
+            !! (ht1 is also the wetland inflow in wetland_control and the deposition record in hyddep_output)
             ht1 = ob(icmd)%hin_sur + tile_fr_surf * ob(icmd)%hin_til
+            ht1 = ob(icmd)%area_ha * ht1
+            ht1%flo = 10. * ht1%flo                        ! mm * ha * 10 = m3
             wet(j) = wet(j) + ht1
+            !! report the runon depth in hru_wb surq_runon, as rls_routesurf does for HRUs without a wetland
+            ls_overq = ht1%flo / (10. * ob(icmd)%area_ha)  ! m3/10*ha = mm
           else
             !! route across hru - infiltrate and deposit sediment
             call rls_routesurf (icmd, tile_fr_surf)
