@@ -124,8 +124,8 @@
           volex = 0
           do j1 = soil(j)%nly, 1, -1
             swst(j1) = swst(j1) + volex
-            if (swst(j1)>soil(j)%phys(j1)%ul*0.999) then !oversaturated
-              volex = max(0., swst(j1) - soil(j)%phys(j1)%ul*0.999)  !excess water. 
+            if (swst(j1)>soil(j)%phys(j1)%ul) then !oversaturated
+              volex = max(0., swst(j1) - soil(j)%phys(j1)%ul)  !excess water. 
               swst(j1) = swst(j1) - volex                         !update soil water
             endif
           end do
@@ -157,7 +157,7 @@
         wet_seep_day(j)%solp = wet(j)%solp * seep_rto
         wet_seep_day(j)%sedp = wet(j)%sedp * seep_rto
         
-        ! subtract the seepage amount from the ponding water
+        ! substract the seepage amount from the ponding water
         wet(j)%no3 = wet(j)%no3 - wet_seep_day(j)%no3 
         wet(j)%nh3 = wet(j)%nh3 - wet_seep_day(j)%nh3 
         wet(j)%orgn = wet(j)%orgn - wet_seep_day(j)%orgn
@@ -173,6 +173,8 @@
       end if
       weir_hgt = wet_ob(j)%weir_hgt   !m
       wet_ob(j)%depth = dep           !m
+      pvol_m3 = wet_ob(j)%pvol
+      evol_m3 = wet_ob(j)%evol
 
       !! wetland outflow using weir equation or decision table
       if (wet_dat_c(ires)%hyd == "paddy") then
@@ -184,8 +186,6 @@
         d_tbl => dtbl_res(irel)
         wbody => wet(j)
         wbody_wb => wet_wat_d(j)
-        pvol_m3 = wet_ob(j)%pvol
-        evol_m3 = wet_ob(j)%evol
         call conditions (j, irel)
         call res_hydro (j, irel, pvol_m3, evol_m3)
         !! subtract outflow from wetland storage (similar to res_control)
@@ -273,5 +273,10 @@
         wet_out_d(j) = ht2
       end if  
 
+      !! don't sum during skip years
+      if (time%yrs > pco%nyskip) then
+        bsn_sedbud%wet_dep_t = bsn_sedbud%wet_dep_t + (wet_in_d(j)%sed - wet_out_d(j)%sed)
+      end if
+        
       return
       end subroutine wetland_control

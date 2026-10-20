@@ -30,14 +30,33 @@
 
       !! allocate water (wallo_control) for all non-natural objects
       
+      !! zero out the daily POD and POR organic-mineral for each POU
+      do ipou = 1, db_mx%wallo_pou
+        !! zero daily POD and POR organic-mineral
+        poud_met(ipou)%duty_tot%duty = 0.
+        poud_met(ipou)%duty_tot%deliv = 0.
+        poud_om(ipou)%pods = hz
+        poud_om(ipou)%pors = hz
+        do ipod = 1, pou(ipou)%pods
+          poud_om(ipou)%pod(ipod) = hz
+          poud_met(ipou)%pod(ipod)%duty = 0.
+          poud_met(ipou)%pod(ipod)%deliv = 0.
+        end do
+        do ipor = 1, pou(ipou)%pors
+          poud_om(ipou)%por(ipor) = hz
+        end do
+      end do   ! ipou = 1, db_mx%wallo_pou
+      
       !! Outside Source Objects - POD Objects - typically measured flow or SWAT+ output
       do iosrc = 1, db_mx%out_src
         lev = 1
+        osrc(iosrc)%wdraw = 0. !reset daily withdrawal for outside source
+        
         !! use use constant, decision table, or recall object for to set the om conc for outside source water
         select case (osrc(iosrc)%conc(lev)%org_min_typ)
         case ("const")
           iom = osrc(iosrc)%conc(lev)%om_num
-          outflo_om = wuse_om_efflu(iom)
+          outflo_om = osrc_om(iom)
                 
         case ("dtbl")
           !! decision table - outside source concentrations vary with flow conditions, seasons, etc
@@ -46,7 +65,7 @@
           call conditions (j, id)
           call actions (j, iob, id)
           !! actions return the organic mineral number for outside source concentrations
-          outflo_om = wuse_om_efflu(iom)
+          outflo_om = osrc_om(iom)
               
         case ("recall")
           !! use recall object for outside source concentrations
@@ -92,6 +111,13 @@
       do istor = 1, db_mx%stor 
         ipod = wtow(istor)%wallo_pod
         if (ipod > 0) then
+          call wallo_control(ipod)
+        end if
+      end do
+          
+      !! allocate and deliver water at start of day for unlimited source PODs
+      do ipod = 1, db_mx%wallo_pod
+        if (pod(ipod)%typ == "unl") then
           call wallo_control(ipod)
         end if
       end do
