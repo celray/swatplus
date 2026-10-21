@@ -17,6 +17,7 @@
       use constituent_mass_module
       use aquifer_module
       use gwflow_module
+      use hru_batch_module, only : wet_dep_d, wet_dep_on, ordered_gate, dtbl_res_point
       
       implicit none
       
@@ -183,7 +184,7 @@
         wet(j)%flo = wbody%flo
       else
         !! discharge (ht2) by decision tables
-        d_tbl => dtbl_res(irel)
+        call dtbl_res_point (irel)
         wbody => wet(j)
         wbody_wb => wet_wat_d(j)
         call conditions (j, irel)
@@ -275,7 +276,9 @@
 
       !! don't sum during skip years
       if (time%yrs > pco%nyskip) then
-        bsn_sedbud%wet_dep_t = bsn_sedbud%wet_dep_t + (wet_in_d(j)%sed - wet_out_d(j)%sed)
+        !! added to bsn_sedbud%wet_dep_t in command order by hru_sums
+        wet_dep_d(j) = wet_in_d(j)%sed - wet_out_d(j)%sed
+        wet_dep_on(j) = .true.
       end if
         
       return

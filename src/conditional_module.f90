@@ -55,4 +55,7 @@
       type (decision_table), dimension(:), allocatable, target :: dtbl_flo
       type (decision_table), pointer :: d_tbl
       
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (d_tbl)
+
       end module conditional_module   

@@ -12,6 +12,7 @@
       use constituent_mass_module
       use res_salt_module
       use res_cs_module
+      use hru_batch_module, only : ordered_gate
       
       implicit none
       
@@ -34,6 +35,8 @@
       integer :: ics = 0                 !none       |counter
       integer :: isstor = 0              !none       |counter
   
+      !! writes diagnostics.out and the shared wetland data
+      call ordered_gate ("wet_initial")
       iweir = wet_ob(iihru)%iweir
         
       !! check if hru can store surface water

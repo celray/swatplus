@@ -161,4 +161,7 @@
       end type plant_transplant_db
       type (plant_transplant_db), dimension(:), allocatable :: transpl
     
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (pl_db)
+
       end module plant_data_module 

@@ -18,6 +18,7 @@
       use reservoir_module
       use maximum_data_module
       use aquifer_module
+      use hru_batch_module, only : ordered_gate
       
       implicit none
       
@@ -61,6 +62,8 @@
       integer :: iwr = 0           !none     |weir counter Chawanda 2025
 
       j = ihru
+      !! operations write files and basin sums, and grazing sets graze for all hrus
+      call ordered_gate ("mgt_sched")
       ires= hru(j)%dbs%surf_stor ! for paddy management Jaehak 2022
       iob = hru(j)%obj_no
       wsa1 = hru(ihru)%area_ha * 10. 

@@ -514,4 +514,13 @@
       integer, dimension(:), allocatable :: tillage_days
       real, dimension(:), allocatable :: tillage_factor
 
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (ihru, albday, bioday, bsprev, canev, enratio, ep_day, ep_max, es_day, &
+      !$omp& etday, fertn, fertnh3, fertno3, fertorgn, fertorgp, fertp, fertsolp, fixn, grazn, &
+      !$omp& grazp, inflpcp, ipl, isep, isol, iwgen, latlyr, latqrunon, ls_overq, lyrtile, nd_30, &
+      !$omp& pet_day, precip_eff, qday, qp_cms, qtile, rto_no3, rto_solp, satexq_chan, sdti, &
+      !$omp& sepcrk, sepcrktot, sepday, snoev, snofall, snomlt, sum_no3, sum_solp, sw_excess, &
+      !$omp& sweepeff, uapd_tot, ulu, uno3d_tot, usle, usle_ei, voltot, vpd, wt_shall, epmax, &
+      !$omp& htfac, par, translt, uapd, un2, uno3d, up2, ubnrunoff, ubntss, wnan)
+
       end module hru_module

@@ -34,6 +34,16 @@ if(NOT TAG)
 endif()
 
 
+# OpenMP Option: runs batches of hrus in parallel (src/hru_batch_module.f90).
+# Only the OpenMP flag is added, so results match the serial build.
+option(ENABLE_OPENMP "Run hru batches in parallel with OpenMP" OFF)
+if(ENABLE_OPENMP)
+    find_package(OpenMP REQUIRED COMPONENTS Fortran)
+    set(OPENMP_SUFFIX "-omp")
+else()
+    set(OPENMP_SUFFIX "")
+endif()
+
 if (UNIX)
     if(CMAKE_Fortran_COMPILER_ID STREQUAL Intel)
         set(fdialect        "-fpp -free -fpe0 -traceback -diag-disable=10448")
@@ -42,7 +52,8 @@ if (UNIX)
         set(FFC             "ifo")
         link_libraries("-static")
     elseif(CMAKE_Fortran_COMPILER_ID STREQUAL IntelLLVM)
-        set(fdialect        "-fpp -free -fpe0 -traceback")
+        # -fp-model=consistent: the serial and the OpenMP build round the same way
+        set(fdialect        "-fpp -free -fpe0 -traceback -fp-model=consistent")
         set(fdebug          "-warn all -O0 -check bounds")
         set(frelease        "-O")
         set(FFC             "ifx")
@@ -62,7 +73,11 @@ if (UNIX)
             # Check if the OS is not Arch Linux or is not based on Arch Linux and is not Fedpra based
             # For non-Arch and non-FedoraLinux based systems using gfortran (GNU), set the link_library static flag to build a static executable.")
             # For Arch Linux based and Fedora based systems using gfortran, omit the link_library static flagt to build a dynamic executable.")
-            if (NOT ("${os_id}" STREQUAL "Arch" OR
+            if (ENABLE_OPENMP)
+                # libgomp is usually shipped as a shared library only, so link the
+                # gfortran runtimes statically and libgomp dynamically
+                link_libraries("-static-libgfortran" "-static-libquadmath" "-static-libgcc")
+            elseif (NOT ("${os_id}" STREQUAL "Arch" OR
                      "${os_like}" MATCHES ".*arch.*" OR
                      "${os_id}" STREQUAL "fedora" ))
                 link_libraries("-static")
@@ -85,7 +100,8 @@ elseif(WIN32)
         set(FFC             "ifo")
         link_libraries("-static")
     elseif(CMAKE_Fortran_COMPILER_ID STREQUAL IntelLLVM)
-        set(fdialect        "/fpp /free /fpe0 /traceback")
+        # /fp:consistent: the serial and the OpenMP build round the same way
+        set(fdialect        "/fpp /free /fpe0 /traceback /fp:consistent")
         set(fdebug          "/warn:all /check:bounds")
         set(frelease        "/O")
         set(FFC             "ifx")
@@ -178,7 +194,7 @@ endif()
 
 # SWAT Version number
 set(SWAT_VERSION ${TAG})
-set(SWATPLUS_EXE "swatplus-${SWAT_VERSION}-${FFC}-${AR}${TY}${NETCDF_SUFFIX}")
+set(SWATPLUS_EXE "swatplus-${SWAT_VERSION}-${FFC}-${AR}${TY}${NETCDF_SUFFIX}${OPENMP_SUFFIX}")
 
 # Set this to 'TRUE' to see the fortran command on compile
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
@@ -215,6 +231,25 @@ endif()
 
 
 file(GLOB sources src/*.f90)
+if(ENABLE_OPENMP)
+    # The OpenMP build compiles a copy of src in which the locals of the routines
+    # that run in parallel are made automatic (tools/omp/omp_generate.py). The copy
+    # is written again whenever a source file or the tool changes.
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    set(OMP_SRC "${CMAKE_BINARY_DIR}/src-omp")
+    execute_process(
+      COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/omp/omp_generate.py
+              ${PROJECT_SOURCE_DIR}/src ${OMP_SRC}
+      RESULT_VARIABLE omp_gen_result
+    )
+    if(NOT omp_gen_result EQUAL 0)
+        message(FATAL_ERROR "tools/omp/omp_generate.py failed")
+    endif()
+    file(GLOB omp_check CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/*.f90)
+    file(GLOB omp_tools ${PROJECT_SOURCE_DIR}/tools/omp/*.py ${PROJECT_SOURCE_DIR}/tools/omp/allowed.txt)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${sources} ${omp_tools})
+    file(GLOB sources ${OMP_SRC}/*.f90)
+endif()
 add_executable(${SWATPLUS_EXE} ${sources})
 
 # NetCDF configuration
@@ -223,6 +258,22 @@ if(ENABLE_NETCDF)
     target_link_libraries(${SWATPLUS_EXE} PRIVATE ${NETCDF_LIBRARIES})
     if(NETCDF_C_INCLUDE)
         target_include_directories(${SWATPLUS_EXE} PRIVATE ${NETCDF_C_INCLUDE})
+    endif()
+endif()
+
+# OpenMP configuration
+if(ENABLE_OPENMP)
+    if(UNIX AND CMAKE_Fortran_COMPILER_ID STREQUAL IntelLLVM)
+        # the static ifx build links the static OpenMP runtime (libiomp5.a);
+        # threadprivate=compat keeps threadprivate variables in thread-local storage,
+        # which is much faster than the default runtime lookup
+        target_compile_options(${SWATPLUS_EXE} PRIVATE -qopenmp -qopenmp-threadprivate=compat)
+        target_link_options(${SWATPLUS_EXE} PRIVATE -qopenmp -qopenmp-link=static)
+    else()
+        target_link_libraries(${SWATPLUS_EXE} PRIVATE OpenMP::OpenMP_Fortran)
+        if(WIN32 AND CMAKE_Fortran_COMPILER_ID STREQUAL IntelLLVM)
+            target_compile_options(${SWATPLUS_EXE} PRIVATE /Qopenmp-threadprivate:compat)
+        endif()
     endif()
 endif()
 
@@ -268,6 +319,7 @@ message( "-- BINARY_DIR            ${PROJECT_BINARY_DIR}")
 message( "-- Install Prefix        ${CMAKE_INSTALL_PREFIX}")
 message( "-- Executable            ${SWATPLUS_EXE}, rev/tag: ${SWAT_VERSION}")
 message( "-- NetCDF Support        ${ENABLE_NETCDF}")
+message( "-- OpenMP                ${ENABLE_OPENMP}")
 if(ENABLE_NETCDF)
 message( "--  NetCDF Library       ${NETCDF_C_LIBRARY}")
 endif()

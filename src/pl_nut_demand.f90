@@ -39,6 +39,7 @@
       use plant_data_module
       use organic_mineral_mass_module
       use climate_module
+      use hru_batch_module, only : ordered_wait, mile_plgrow, unset, delg_p => lo_delg_p
 
       implicit none      
       
@@ -48,7 +49,7 @@
       integer :: nly = 0        !none          |soil layer number
       integer :: idp = 0        !none          |plant data base number (plants.plt)
       real :: delg = 0.         !              |
-      real :: delg_p = 0.       !              |
+
 
       j = ihru
       
@@ -65,6 +66,9 @@
         if (pcom(j)%plcur(ipl)%phumat > 0.1) then
           delg = (w%tave - pldb(idp)%t_base) / pcom(j)%plcur(ipl)%phumat
           delg_p = (w%tave - pldb(idp)%t_base) / pcom(j)%plcur(ipl)%phumat_p
+        else
+          !! delg_p keeps the value of the last plant that set it
+          if (delg_p == unset) call ordered_wait (mile_plgrow, "delg_p")
         end if
         if (delg < 0.) delg = 0.
         if (delg_p < 0.) delg_p = 0.

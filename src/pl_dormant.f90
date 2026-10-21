@@ -9,6 +9,7 @@
       use organic_mineral_mass_module
       use hru_module, only : hru, dormhr, ipl, ihru
       use plant_module
+      use hru_batch_module, only : ordered_gate
 
       implicit none
 
@@ -78,6 +79,9 @@
       !! check if end of dormant period
       if (pcom(j)%plcur(ipl)%idorm == "y" .and. wst(iwst)%weat%daylength - dormhr(j) >=   &
                                                                 wgn_pms(iwgn)%daylmn) then
+        !! pl_biomass_gro then uses the uptake demands (un2, up2, uapd) that the last
+        !! hru growing this plant number left
+        call ordered_gate ("dormancy_end")
         if (pldb(idp)%typ == "perennial") then
           !! end of perennial dormant period
           pcom(j)%plcur(ipl)%idorm = "n"

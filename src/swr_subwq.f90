@@ -40,6 +40,7 @@
       use organic_mineral_mass_module
       use carbon_module
       use climate_module
+      use hru_batch_module, only : ordered_wait, mile_enratio, unset
       
       implicit none
 
@@ -47,6 +48,7 @@
       real :: soxy = 0.        !mg/L          |dissolved oxygen saturation concentration 
       real :: tp = 0.          !kmoles P      |kilomoles of phosphorus in nutrient loading to
                                !              |main channel
+      real :: er                    !none          |enrichment ratio
       real :: org_c = 0.       !kg            |organic carbon content of surface runoff on
                                !              |day in HRU
       real :: wtmp = 0.        !deg K         |temperature of surface runoff
@@ -75,7 +77,19 @@
  
           !! calculate organic carbon loading to main channel
           org_c = 0.
-          org_c = (soil1(j)%cbn(1) / 100.) * enratio * sedyld(j) * 1000.
+          !! enratio is set only on days with surface runoff (pest_enrsb); on other
+          !! days it is the value of the last hru that set it. without sediment, or
+          !! with SWAT-C (org_c is set again below), the value does not matter
+          er = enratio
+          if (er == unset) then
+            if (sedyld(j) /= 0. .and. bsn_cc%cswat /= 2) then
+              call ordered_wait (mile_enratio, "enratio_subwq")
+              er = enratio
+            else
+              er = 1.
+            end if
+          end if
+          org_c = (soil1(j)%cbn(1) / 100.) * er * sedyld(j) * 1000.
           
           !!add by zhang
           !!========================

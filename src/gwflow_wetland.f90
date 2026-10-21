@@ -8,6 +8,7 @@
       use hydrograph_module, only : ob,sp_ob1,wet,wet_in_d
       use hru_module, only : hru
       use water_body_module, only : wet_wat_d
+      use gwflow_defer_module, only : gwdef_wetl
 
       implicit none
 
@@ -81,10 +82,8 @@
               if(gw_inflow > gwvol_avail) then
                 gw_inflow = gwvol_avail
 							endif
-              !include in groundwater source-sink array (will be removed in gwflow_simulate)
-              gw_hyd_ss(cell_id)%wetl = gw_hyd_ss(cell_id)%wetl + (gw_inflow*(-1)) !m3 negative = leaving the aquifer
-              gw_hyd_ss_yr(cell_id)%wetl = gw_hyd_ss_yr(cell_id)%wetl + (gw_inflow*(-1)) !store for annual water
-              gw_hyd_ss_mo(cell_id)%wetl = gw_hyd_ss_mo(cell_id)%wetl + (gw_inflow*(-1)) !store for monthly water
+              !the water term (m3, negative = leaving the aquifer) goes into the groundwater source-sink
+              !arrays (removed in gwflow_simulate); it is logged below and added in command order
               !track total inflow (for wetland water balance)
               wet_inflow = wet_inflow + gw_inflow !m3 --> track total inflow (for wetland water balance)
 
@@ -94,8 +93,6 @@
                 if(heat_flux >= gwheat_state(cell_id)%stor) then
                   heat_flux = gwheat_state(cell_id)%stor
                 endif
-                gw_heat_ss(cell_id)%wetl = gw_heat_ss(cell_id)%wetl + (heat_flux*(-1))
-                gw_heat_ss_yr(cell_id)%wetl = gw_heat_ss_yr(cell_id)%wetl + (heat_flux*(-1))
               endif
 
               !add solute mass to wetland
@@ -109,9 +106,6 @@
                   if(solmass(s) > gwsol_state(cell_id)%solute(s)%mass) then !can only remove what is there
                     solmass(s) = gwsol_state(cell_id)%solute(s)%mass
                   endif
-                  gwsol_ss(cell_id)%solute(s)%wetl = solmass(s)
-                  gwsol_ss_sum(cell_id)%solute(s)%wetl = gwsol_ss_sum(cell_id)%solute(s)%wetl + solmass(s)
-									gwsol_ss_sum_mo(cell_id)%solute(s)%wetl = gwsol_ss_sum_mo(cell_id)%solute(s)%wetl + solmass(s)
                 enddo
                 !add solute mass to wetland object
                 !no3
@@ -123,6 +117,10 @@
                 !salts
                 !constituents
               endif
+
+              !log the water, heat and solute terms of this cell (added to the cell sums in command order)
+              call gwdef_wetl (hru_id, cell_id, (gw_inflow*(-1)), (gw_heat_flag == 1), (heat_flux*(-1)),   &
+                               (gw_solute_flag == 1), gw_nsolute, solmass)
 						else !wetland seepage to soil layers (add for all connected cells)
               if(wet_thick(ires) > 0) then
 						    wet_seep = wet_seep + (wet_area * wet_k * ((wet_stage-wt)/wet_thick(ires))) !m3/day

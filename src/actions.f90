@@ -29,6 +29,9 @@
       use reservoir_data_module
       use manure_allocation_module
       use water_allocation_module
+      !! these locals keep their value between calls (see hru_batch_module)
+      use hru_batch_module, only : ordered_gate, j => lo_j, irrop => lo_irrop, idtill => lo_idtill, istr => lo_istr, &
+                                   istr1 => lo_istr1, yield => lo_yield
 
       implicit none
       
@@ -46,7 +49,6 @@
       integer :: ial = 0                   !none     |counter
       !integer :: jj                        !none     |counter
       integer :: iburn = 0                 !none     |burn type from fire data base
-      integer :: idtill = 0                !none     |tillage type
       integer :: ifertop = 0               !         |surface application fraction from chem app data base
       integer :: ifrt = 0                  !         |fertilizer type from fert data base
       integer :: ipestop = 0               !         |surface application fraction from chem app data base
@@ -54,13 +56,9 @@
       integer :: iharvop = 0               !         |harvest operation type
       integer :: iihru = 0                 !         |
       integer :: ilu = 0                   !         |landuse type 
-      integer :: j = 0                     !none     |counter
       integer :: iob = 0
       integer :: idp = 0                   !         |
-      integer :: istr = 0                  !         |
-      integer :: istr1 = 0                 !         |
       integer :: iplt_bsn = 0
-      integer :: irrop = 0                 !         |
       integer :: igr = 0
       integer :: ireg = 0                  !         |
       integer :: ilum = 0
@@ -86,7 +84,6 @@
       real :: rto1 = 0.                    !         |
       real :: pest_kg = 0.                 !kg/ha    |amount of pesticide applied 
       real :: chg_par                      !variable |new parameter value
-      real :: yield = 0.
       real :: sumpst = 0.
       real :: rock = 0.
       real :: p_factor = 0.
@@ -239,6 +236,11 @@
        
           !irrigate - hru action
           case ("irrigate")
+            !! a source object (aquifer, channel, reservoir) is shared with other hrus
+            select case (d_tbl%act(iac)%ob)
+            case ("aqu", "cha", "sdc", "res")
+              call ordered_gate ("act_irrigate")
+            end select
             ipl = 1
             j = ob_cur      ! hru number 
             
@@ -493,6 +495,8 @@
             
           !harvest only
           case ("harvest")
+            !! adds to the basin crop yields
+            call ordered_gate ("act_harvest")
             j = d_tbl%act(iac)%ob_num
             if (j == 0) j = ob_cur
             
@@ -609,6 +613,8 @@
   
           !harvest and kill
           case ("harvest_kill")
+            !! adds to the basin crop yields
+            call ordered_gate ("act_harvest")
             j = d_tbl%act(iac)%ob_num
             if (j == 0) j = ob_cur
             

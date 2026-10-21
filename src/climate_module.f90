@@ -268,4 +268,7 @@
       character(len=50), dimension(:), allocatable :: atmo_n
       character(len=50), dimension(:), allocatable :: petm_n
           
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (w)
+
       end module climate_module

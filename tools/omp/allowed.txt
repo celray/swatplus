@@ -1,0 +1,166 @@
+# Reviewed hazards in the routines that hru batches run in parallel
+# (call trees of hru_control and obj_inflow). ompaudit.py --check reports
+# everything that is not listed here; omp_generate.py leaves the `saved` locals
+# as they are.
+#
+#   shared <variable>       module variable written in the tree that is neither
+#                           indexed by the current hru/object nor threadprivate
+#   saved  <routine>:<var>  local that keeps its value between calls on purpose
+#   io     <routine>        routine that reads or writes files
+#
+# Each line ends with the reason the entry is safe.
+
+# --- written per hru, indexed by another name for the current hru or object
+shared cs_soil      per hru (jj, ihru = current hru)
+shared hcsb_d       per hru (jj = current hru)
+shared wet_water    per hru (jj, iihru = current hru)
+shared wetcs_d      per hru (jj = current hru)
+shared wetsalt_d    per hru (jj = current hru)
+shared hsaltb_d     per hru (jj = current hru)
+shared cn2          per hru (h = current hru)
+shared smx          per hru (h = current hru)
+shared wrt          per hru (second index h = current hru)
+shared soil         per hru (jj, hru_id = current hru)
+shared soil1        per hru (jj = current hru)
+shared pl_mass      per hru (jj = current hru)
+shared tillage_days   per hru (jj = current hru)
+shared tillage_depth  per hru (jj = current hru)
+shared tillage_switch per hru (jj = current hru)
+shared pcom         per hru (ob_cur = current hru); other hrus only from coupled decision tables
+shared grwway_vel   per hru (k = current hru)
+shared wet          per hru (jj, hru_id = current hru)
+shared hru          per hru; hru(hru_rcv) of a saturated buffer is written after ordered_gate (hru_control)
+shared ob           ob(icmd) per object; other objects only in hru_fr_change and water allocation (gated)
+
+# --- water allocation: wallo_control and the routines it calls run after ordered_gate
+shared aqu          water allocation (gated)
+shared canal_om_out water allocation (gated)
+shared canal_om_stor water allocation (gated)
+shared orcv_om      water allocation (gated)
+shared outflo_om    water allocation (gated)
+shared outflo_cs    water allocation (gated)
+shared poud_om      water allocation (gated)
+shared wal_tr_omd   water allocation (gated)
+shared wal_use_omd  water allocation (gated)
+shared wtow_om_stor water allocation (gated)
+shared wtp_om_out   water allocation (gated)
+shared wtp_om_stor  water allocation (gated)
+shared wuse_om_stor water allocation (gated)
+shared canal        water allocation (gated)
+shared dmd_m3       water allocation (gated)
+shared pou          water allocation (gated)
+shared poud_met     water allocation (gated)
+shared trn_fr       duty_fr action (coupled decision table, gated)
+shared wallo_comp   water allocation (gated)
+
+# --- irrigation and other sources: coupled decision tables, wet_irrp and water allocation, all gated
+shared aqu_d        irrigation source (gated)
+shared ch_stor      irrigation source (gated)
+shared res          irrigation source (gated)
+shared res_ob       irrigation source and wetland release options writing res_ob (coupled tables, gated)
+shared ch_water     irrigation source (gated)
+shared cs_aqu       irrigation source (gated)
+shared cs_irr       irrigation source (gated)
+shared res_water    irrigation source (gated)
+
+# --- written by coupled decision table actions or by mgt_sched, both after ordered_gate
+shared lsu_elem     hru_fr_update (coupled, gated)
+shared ru_elem      hru_fr_update (coupled, gated)
+shared ru_n         hru_fr_update (coupled, gated)
+shared iru          hru_fr_update (coupled, gated)
+shared plcal        harvest sums (coupled actions and mgt_sched, gated)
+shared bsn_crop_yld harvest sums (coupled actions and mgt_sched, gated)
+shared bsn_crop_yld_aa harvest sums (coupled actions, gated)
+shared basin_plants lu_change (coupled, gated)
+shared plts_bsn     lu_change (coupled, gated)
+shared sched        plant_init from lu_change (coupled, gated)
+shared mallo        manure_demand (coupled, gated)
+shared sd_ch        chan_change (coupled, gated)
+shared rndseed_cond probability conditions (coupled, gated)
+shared graze        set by mgt_sched and the graze action (gated); read after ordered_gate when there is more than one grazing operation
+shared csmix        tillage mixing of pesticides runs after ordered_gate
+shared sep          hrus with an active septic type run after ordered_gate (hru_control)
+shared wet_dat      wet_initial runs after ordered_gate
+shared wet_init     wet_initial runs after ordered_gate
+
+# --- deferred: logged per hru and added in command order by hru_sums (gwflow_defer_module)
+shared gw_hyd_ss       deferred (gwdef_apply)
+shared gw_hyd_ss_mo    deferred (gwdef_apply)
+shared gw_hyd_ss_yr    deferred (gwdef_apply)
+shared gw_heat_ss      deferred (gwdef_apply)
+shared gw_heat_ss_yr   deferred (gwdef_apply)
+shared gwsol_ss        deferred (gwdef_apply)
+shared gwsol_ss_sum    deferred (gwdef_apply)
+shared gwsol_ss_sum_mo deferred (gwdef_apply)
+shared gws_cell     per hru log slots (gwdef_off)
+shared gws_q        per hru log slots (gwdef_off)
+shared gws_h        per hru log slots (gwdef_off)
+shared gws_hflag    per hru log slots (gwdef_off)
+shared gww_cell     per hru log slots (gwdef_off)
+shared gww_q        per hru log slots (gwdef_off)
+shared gww_h        per hru log slots (gwdef_off)
+shared gww_hflag    per hru log slots (gwdef_off)
+shared gww_sflag    per hru log slots (gwdef_off)
+shared gww_sol      per hru log slots (gwdef_off)
+
+# --- benign
+shared bsn_cc       ero_cfactor sets bsn_cc%cfac = 1, the same value from every hru
+
+# --- locals that keep their value between calls; read only after ordered_gate
+saved mgt_sched:itr          transplant index from the last transplant operation (mgt_sched is gated)
+saved mgt_sched:idp          plant of the last operation, used in mgt_out.txt (gated)
+saved mgt_sched:ipud         puddle operation (gated)
+saved mgt_sched:idtill       tillage operation (gated)
+saved plant_init:igrow       start day of the last annual plant (startup and lu_change, both serial or gated)
+saved wet_irrp:iob           object of the last paddy irrigation (wet_irrp is gated)
+saved wet_irrp:isrc          source of the last paddy irrigation (gated)
+saved wallo_pou_deliv:j      hru of the last delivery (water allocation, gated)
+
+# --- locals gfortran thinks may be read before they are written (uninit_scan.py);
+#     reviewed: the read does not use the previous call's value
+local actions:sumpst            counter nothing reads
+local actions:ipud              stale only if the puddle option is not in puddle.ops (input error)
+local conditions:ipl            read only for an hru without plants, when act_hit is already "n"
+local conditions:iob            needs cond%ob other than hru or hlt; dtbl_coupled makes those tables coupled
+local conditions:targ           needs a lim_op or lim_var the reader rejects
+local conditions:targ_val       needs a lim_op or lim_var the reader rejects
+local et_act:sev                set for layer 1 whenever esd > 0, before layer 2 reads it
+local gwflow_soil:heat_flux     read and set under the same gw_heat_flag test
+local gwflow_wetland:heat_flux  passed to the log every time, used only under the gw_heat_flag test that sets it
+local mgt_sched:icom            set whenever mgt%op /= "fert", always so for harv
+local nut_psed:fr_orgp          set when sedp_attach > 1e-9; otherwise the branch that reads it is skipped
+local nut_psed:fr_actmin        as fr_orgp
+local nut_psed:fr_stamin        as fr_orgp
+local pl_community:ip           read only when npl_gro == 1, which sets it
+local res_hydro:b_lo            set for every file_pointer the reader accepts
+local res_hydro:ic              set for every lim_op the reader accepts
+local smp_grass_wway:sf_depth   stale only if 0 < sf_area <= 1e-6
+local smp_grass_wway:sf_sed     stale only if 0 < sf_area <= 1e-6
+local smp_grass_wway:rcharea    set in both branches before the read
+local swr_percmicro:sol_k_sep   read and set under the same septic test
+local wet_cs:v_settle           set for constituents 1 to 3, the only ones
+local wet_cs:k_react            set for constituents 1 to 3, the only ones
+local wet_initial:iprop         stale only for an unknown wetland name (input error)
+local wetland_control:swst      elements 1 to nly are set before the loop that reads them
+
+# --- file input and output
+io actions          mgt_out.txt / lu_change_out.txt lines: tables writing them are coupled (gated)
+io mgt_sched        mgt_out.txt lines (gated)
+io hru_control      paddy_test.csv line (gated)
+io hru_fr_change    reads update files (hru_fr_update action, gated)
+io wallo_pou_deliv  mgt_out.txt line (gated)
+io wet_initial      diagnostics.out lines (gated)
+io exp_w            console warnings only; their order in the console can change with threads
+
+# --- the batch module's bookkeeping
+shared slot_real    each slot writes only its column, before it marks the milestone
+shared slot_real_set each slot writes only its column, before it marks the milestone
+shared slot_mile    written inside critical (batch_slots)
+shared miles_done   written inside critical (batch_slots), read with atomic read
+shared mile_setter  written inside critical (batch_slots)
+shared mile_seen    written inside critical (batch_slots)
+shared nsite        statistics, written inside critical (batch_stats)
+shared site_name    statistics, written inside critical (batch_stats)
+shared site_calls   statistics, written inside critical (batch_stats)
+shared site_waits   statistics, written inside critical (batch_stats)
+shared site_ticks   statistics, written inside critical (batch_stats)

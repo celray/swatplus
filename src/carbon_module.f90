@@ -371,6 +371,9 @@
         module procedure carbon_plant_gl_div
       end interface 
         
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (org_allo, org_con, org_flux, org_frac, org_ratio, org_tran)
+
       contains
 
       function carbon_soil_flux__add (hru1, hru2) result (hru3)

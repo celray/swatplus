@@ -5,6 +5,7 @@
       use output_ls_pathogen_module
       use hru_module, only : hru, sol_plt_ini, ihru, sedyld, qday, enratio
       use soil_module
+      use hru_batch_module, only : ordered_wait, mile_enratio, unset
       
       implicit none
 
@@ -16,6 +17,8 @@
       real :: path_kd = 0.
 
       j = ihru
+      !! enratio is the value of the last hru that set it if this one has not
+      if (enratio == unset) call ordered_wait (mile_enratio, "enratio_path")
          
       do ipath = 1, cs_db%num_paths
         isp_ini = hru(ihru)%dbs%soil_plant_init

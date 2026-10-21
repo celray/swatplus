@@ -358,6 +358,11 @@
         module procedure pmin_mult_const
       end interface 
 
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (abgr_drop, decomp, harv_leaf, harv_left, harv_seed, harv_stem, &
+      !$omp& leaf_drop, mix_mn, mix_mp, mix_org, org_frt, photo_decomp, pl_burn, pl_mass_up, &
+      !$omp& pl_yield, seed_drop, stem_drop, transfer)
+
     contains
 
       !! add mineral n

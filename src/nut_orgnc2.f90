@@ -26,6 +26,7 @@
       use carbon_module
       use plant_module
       use plant_data_module
+      use hru_batch_module, only : ordered_gate, unset, c_microb_sed => lo_c_microb_sed
       
       implicit none
 
@@ -52,7 +53,6 @@
       real :: latc_clyr = 0.        !              | 
       real :: n_left_rto = 0.              !              |
       real :: c_microb_perc = 0.               !              |
-      real :: c_microb_sed = 0.               !              |
       real :: c_ly1 = 0.
       
       j = ihru
@@ -137,6 +137,8 @@
         end if
       end if
 
+      !! c_microb_sed is set only when there is erosion; otherwise it is the last value set
+      if (c_microb_sed == unset) call ordered_gate ("c_microb_sed")
       soil1(j)%microb(1)%c = soil1(j)%microb(1)%c - c_microb_sed 
       soil1(j)%tot(1)%c = soil1(j)%str(1)%c + soil1(j)%meta(1)%c + soil1(j)%hp(1)%c +        &
                                                 soil1(j)%hs(1)%c + soil1(j)%microb(1)%c 

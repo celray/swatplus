@@ -187,4 +187,7 @@
       end type management_schedule
       type (management_schedule), dimension (:), allocatable :: sched
       
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (mgt, sweepop)
+
       end module mgt_operations_module 

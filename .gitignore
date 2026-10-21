@@ -116,3 +116,4 @@ ford.md
 [Tt]mp/
 /workdata
 enc_temp_folder/
+__pycache__/

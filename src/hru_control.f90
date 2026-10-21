@@ -36,6 +36,8 @@
       use salt_module !rtb salt
       use cs_module !rtb cs
       use gwflow_module !rtb gwflow
+      use hru_batch_module, only : ordered_gate, dtbl_lum_point, graze_gate, milestone, mile_enratio,  &
+                                   mile_plgrow
 	    use tillage_data_module
       !use basin_module, only : bsn_cc
       
@@ -97,6 +99,9 @@
       real :: sedppm = 0.        !Jeong 2024
       
       j = ihru
+
+      !! hrus of one septic type share sep(isep)%opt, which sep_biozone changes
+      if (sep(iseptic(j))%opt /= 0) call ordered_gate ("septic")
       
       !rtb - calculate soil water at the beginning of the day
       sw_volume_begin = 0.
@@ -177,6 +182,7 @@
 
         !! if channel is a POD, allocate water for users and adjust flow in channel accordingly
         if (hru(j)%wallo_pod > 0) then
+          call ordered_gate ("wallo")
           call wallo_control (hru(j)%wallo_pod)
         end if
 
@@ -185,7 +191,7 @@
           do iauto = 1, sched(isched)%num_autos
             id = sched(isched)%num_db(iauto)
             jj = j
-            d_tbl => dtbl_lum(id)
+            call dtbl_lum_point (id)
             call conditions (jj, iauto)
             call actions (jj, iob, iauto)
             
@@ -288,6 +294,8 @@
           
         !! add tile flow to tile (saturated buffer)
         if (hru(j)%sb%sb_db%hru_rcv == j) then
+          !! the source hru sets the inflow of the buffer
+          call ordered_gate ("buffer_receive")
           call rls_routetile (icmd, tile_fr_surf)
         end if
         
@@ -325,6 +333,7 @@
         !! manual irrigation on if ponding depth is lower than the threshold depth 
         if (hru(j)%paddy_irr > 0) then
           if (wet_ob(j)%depth < hru(j)%irr_hmin / 1000.) then 
+            call ordered_gate ("wet_irrp")
             call wet_irrp
           endif
         endif
@@ -372,6 +381,8 @@
         !! graze only if adequate biomass in HRU
         if (igrz(j) == 1) then
           ndeat(j) = ndeat(j) + 1
+          !! graze is the grazing operation the last hru started
+          if (graze_gate) call ordered_gate ("graze")
           !! if total above ground biomass is available - graze
           call pl_graze
           !! check to set if grazing period is over
@@ -448,6 +459,8 @@
         
         !! compute plant biomass, leaf, root and seed growth
         call pl_grow
+        !! delg_p does not change after this point
+        call milestone (mile_plgrow)
 
         !! reset harvested biomass and number of harvests for yearly yield output
         if (time%end_yr == 1) then
@@ -542,6 +555,8 @@
             call nut_psed
           end if
         end if
+        !! enratio does not change after this point
+        call milestone (mile_enratio)
 
         !! add nitrate in rainfall to soil profile
         call nut_nrain
@@ -556,6 +571,7 @@
           end if
           if (wet_dat_c(ires)%hyd.eq.'paddy') then !.and.time%yrs > pco%nyskip) then
             if (wet_ob(j)%depth > -0.1) then
+           call ordered_gate ("paddy_csv")
            write(100100,'(4(I6,","),20(f20.1,","))') time%yrc,time%mo,time%day_mo,j,w%precip,irrig(j)%applied,hru(j)%water_seep,     &
             pet_day,es_day,ep_day,wet_ob(j)%weir_hgt*1000,wet_ob(j)%depth*1000.,ht2%flo/(hru(j)%area_ha*10.),soil(j)%sw,sedppm,ht2%sed*1000, &
             wet(j)%no3,ht2%no3,pcom(j)%lai_sum,saltcon,soil(j)%sw/soil(j)%sumfc*100 
@@ -640,6 +656,8 @@
 
         !! check if hru is a source for a saturated buffer
         if (hru(j)%sb%sb_db%hru_src == j) then
+          !! changes the inflow of the buffer hru
+          call ordered_gate ("buffer_source")
           !! use decision table
           id = hru(j)%sb%dtbl
           d_tbl => dtbl_flo(id)
@@ -873,10 +891,7 @@
         hpw_d(j)%phubase0 = phubase(j)
 
       ! output_losses
-        !! don't sum during skip years
-        if (time%yrs > pco%nyskip) then
-          bsn_sedbud%upland_t = bsn_sedbud%upland_t + sedyld(j)
-        end if
+        !! bsn_sedbud%upland_t is summed in command order by hru_sums
         
         hls_d(j)%sedyld = sedyld(j) / hru(j)%area_ha
         hls_d(j)%sedorgn = sedorgn(j)

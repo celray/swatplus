@@ -33,6 +33,7 @@
       use constituent_mass_module
       use plant_module
       use tillage_data_module
+      use hru_batch_module, only : ordered_gate
       
       implicit none
       
@@ -168,6 +169,8 @@
 
           !! mix pesticides
           if (cs_db%num_pests > 0) then
+            !! csmix is shared by all hrus
+            call ordered_gate ("tillmix_pest")
             csmix%pest(:) = 0.
             do k = 1, cs_db%num_pests
               csmix%pest(k) = csmix%pest(k) + cs_soil(jj)%ly(l)%pest(k) * frac_mixed

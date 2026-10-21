@@ -9,6 +9,7 @@
       use hydrograph_module, only : ob
       use hru_module, only : gwsoilq
       use time_module, only : time
+      use gwflow_defer_module, only : gwdef_soil
 
       implicit none
 
@@ -63,10 +64,8 @@
 					    poly_area = gw_state(cell_id)%area * cells_fract(hru_id,k) !area of cell within HRU
               hru_Q = (hru_soilz - vadose_z) * poly_area * gw_state(cell_id)%spyd !m3 of groundwater to transfer to the soil profile
 
-              !store for water balance calculations (in gwflow_simulate)
-              gw_hyd_ss(cell_id)%soil = gw_hyd_ss(cell_id)%soil + (hru_Q*(-1)) !negative = leaving the aquifer
-              gw_hyd_ss_yr(cell_id)%soil = gw_hyd_ss_yr(cell_id)%soil + (hru_Q*(-1)) !store for annual water
-              gw_hyd_ss_mo(cell_id)%soil = gw_hyd_ss_mo(cell_id)%soil + (hru_Q*(-1)) !store for monthly water
+              !the water balance terms (negative = leaving the aquifer) are logged below and added to
+              !gw_hyd_ss, gw_hyd_ss_yr and gw_hyd_ss_mo in command order (gwflow_defer_module)
 
               !heat
               if(gw_heat_flag == 1) then
@@ -74,9 +73,10 @@
                 if(heat_flux >= gwheat_state(cell_id)%stor) then
                   heat_flux = gwheat_state(cell_id)%stor
                 endif
-                gw_heat_ss(cell_id)%soil = gw_heat_ss(cell_id)%soil + (heat_flux*(-1))
-                gw_heat_ss_yr(cell_id)%soil = gw_heat_ss_yr(cell_id)%soil + (heat_flux*(-1))
               endif
+
+              !log the terms stored for the water balance calculations (in gwflow_simulate)
+              call gwdef_soil (hru_id, cell_id, (hru_Q*(-1)), (gw_heat_flag == 1), (heat_flux*(-1)))
 
               !determine which HRU soil layers are to receive groundwater
               water_depth = 0.

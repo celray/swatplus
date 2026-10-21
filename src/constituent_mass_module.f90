@@ -627,6 +627,9 @@
         module procedure hydcsout_mult_const
       end interface
 
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (hcs1, hcs2, hcs3)
+
       contains
       
       function hydcsout_add (hydcs1, hydcs2) result (hydcs3)

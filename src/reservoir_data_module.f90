@@ -143,4 +143,7 @@
       end type reservoir_weir_outflow
       type (reservoir_weir_outflow),dimension(:),allocatable :: res_weir   
     
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (wbody_prm)
+
       end module reservoir_data_module 

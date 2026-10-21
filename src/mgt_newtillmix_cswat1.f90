@@ -34,6 +34,7 @@
       use plant_module
       use plant_data_module
       use tillage_data_module
+      use hru_batch_module, only : ordered_gate
       
       implicit none
       
@@ -181,6 +182,8 @@
           
           !! mix pesticides
           npmx = cs_db%num_pests
+          !! csmix is shared by all hrus and adds up over all tillage operations
+          if (npmx > 0) call ordered_gate ("tillmix_pest")
           do k = 1, npmx
             csmix%pest(k) = csmix%pest(k) + cs_soil(jj)%ly(l)%pest(k) * frac_mixed
           end do

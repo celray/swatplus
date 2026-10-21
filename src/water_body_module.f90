@@ -52,6 +52,9 @@
         module procedure watbod_ave
       end interface   
       
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (wbody_wb)
+
       contains
       
      !! routines for water body module

@@ -45,6 +45,7 @@
       use soil_module
       use time_module
       use reservoir_module
+      use hru_batch_module, only : ordered_gate, unset
       
       implicit none
       
@@ -179,6 +180,8 @@
         stor= 0.
       end if
       if (wet_ob(j)%area_ha <= 0.) then ! determine stor
+        !! etday is the value of the previous hru (it is set later in hru_control)
+        if (etday == unset) call ordered_gate ("etday")
         stor = precip_eff - inflpcp - etday !Daniel 10/05/07
         if(surfq(j) > 0.0) stor = stmaxd(j)
       else

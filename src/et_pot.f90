@@ -42,6 +42,7 @@
       use climate_module
       use hru_module, only : hru, ihru, albday, ipl, pet_day, vpd, ep_max
       use plant_module
+      use hru_batch_module, only : ordered_gate, unset, gsi_adj => lo_gsi_adj
       
       implicit none
       
@@ -81,7 +82,6 @@
       real :: rout = 0.            !MJ/m2         |outgoing radiation
       real :: d = 0.               !cm            |displacement height for plant type
       real :: chz = 0.             !cm            |vegetation height
-      real :: gsi_adj = 0.         !              |
       real :: pet_alpha = 0.       !none          |alpha factor in Priestley-Taylor PET equation
       real :: ee                   !              | 
       real :: gsi_wav = 0.         !              | 
@@ -247,6 +247,8 @@
             end do
           
             !! calculate canopy resistance
+            !! gsi_adj is set in the plant loop; without plants it is the last value set
+            if (gsi_adj == unset) call ordered_gate ("gsi_adj")
             rc = 1. / (gsi_adj + 0.01)           !single leaf resistance
             rc = rc / (0.5 * (pcom(j)%lai_sum + 0.01) * (1.4 - 0.4 * co2y(time%yrs) / 330.))
 

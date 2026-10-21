@@ -5,6 +5,7 @@
       use maximum_data_module
       use calibration_data_module
       use hru_module
+      use hru_batch_module, only : batch_init, batch_stats_print
 
       implicit none
       
@@ -135,6 +136,9 @@
       call dr_ru
         
       call hyd_connect_out
+
+      !! group the hru commands into batches that can run in parallel
+      call batch_init
       
       ! save initial time settings for soft calibration runs
       time_init = time
@@ -151,6 +155,7 @@
       else
         call time_control
       end if
+      call batch_stats_print
       
       if (cal_soft == "y") call calsoft_control
       

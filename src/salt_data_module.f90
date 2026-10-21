@@ -36,6 +36,12 @@
       !generic array to hold salt ion concentrations
       real :: soil_salt_conc(8) = 0.!generic array to hold salt ion concentrations
       
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (bicar_conc, c11, c22, c5, cal_conc, car_conc, cl_conc, lamda, mg_conc, &
+      !$omp& pot_conc, salt_c3, salt_c4, salt_k1, salt_k2, salt_k3, salt_k4, salt_k5, sod_conc, &
+      !$omp& soil_salt_conc, sol_caco3, sol_caso4, sol_mgco3, sol_mgso4, sol_nacl, sul_conc, &
+      !$omp& upion1, upion2, upion3, upion4, upion5, upion6, upion7, upion8)
+
       contains
 
       end module salt_data_module 

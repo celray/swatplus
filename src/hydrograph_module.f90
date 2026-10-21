@@ -1227,6 +1227,9 @@
         module procedure hydout_div_conv
       end interface   
              
+      !! one copy per thread: scratch of hru_control for the hrus of a batch (hru_batch_module)
+      !$omp threadprivate (icmd, ich, iwst, ht1, ht2, hdsep1, wbody)
+
       contains
 
       !! function to convert mass to concentration
