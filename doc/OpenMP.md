@@ -21,11 +21,13 @@ Compare results only between builds from the same compiler. gfortran and ifx res
 
 ifx 2026.0 gives every thread the data of the main thread when an allocatable `threadprivate` array is passed to `copyin`. `batch_init` therefore allocates the per-thread arrays in each thread.
 
+On models with wetland HRUs, `et_act.f90` and `swift_output.f90` read `wet_hyd(ihyd)`, where `ihyd` is the wetland database number, while `wet_hyd` has one element per HRU. The read can fall past the end of the array, and the value it finds depends on the compiler and the build. The ifx serial and OpenMP builds can then differ for those HRUs. The serial code does the same, so this is not caused by the parallel runs.
+
 ## Design
 
 ### Batches
 
-The command loop (`command.f90`) runs the objects of a day in the order set by `hyd_connect`. `hru_batch_module` groups consecutive HRU commands into batches, where no HRU of a batch receives flow from another HRU of the same batch. The HRUs of a batch get slots 1, 2, ... in command order. `hru_batch_run` runs `obj_inflow` and `hru_control` for every slot in parallel, then, in command order, the steps the serial loop runs after each HRU: the basin sums (`hru_sums`) and the deposition and outflow hydrograph output. The last slot runs on the main thread, so the module scratch left after a batch is what the serial loop leaves after its last HRU.
+The command loop (`command.f90`) runs the objects of a day in the order set by `hyd_connect`. `hru_batch_module` groups consecutive HRU commands into batches, where no HRU of a batch receives flow from another HRU of the same batch. The HRUs of a batch get slots 1, 2, ... in command order. `hru_batch_run` runs `obj_inflow` and `hru_control` for every slot in parallel, then, in command order, the steps the serial loop runs after each HRU: the basin sums (`hru_sums`) and the deposition and outflow hydrograph output. The last slot runs on the main thread, so the module scratch left after a batch is what the serial loop leaves after its last HRU. The loop uses `schedule (monotonic: dynamic, 1)`, so the slots start in command order. With the default dynamic schedule, libiomp5 (ifx) starts each thread in a different part of the batch and the gates then make the threads run one slot at a time.
 
 `obj_inflow.f90` is the block of `command.f90` that moves the current day of the hydrographs and sums the inflow of an object. It was moved out unchanged so a batch can call it for each slot.
 

@@ -515,7 +515,10 @@
       !! org_con and org_allo contain carbon parameters as well as scratch
       !$omp parallel default (shared) private (k) copyin (org_con, org_allo)
       call dtbl_copies
-      !$omp do schedule (dynamic, 1)
+      !! the slots must start in command order. a gate waits for earlier slots, and with the
+      !! default (nonmonotonic) dynamic schedule of OpenMP 5.0 and libiomp5 each thread starts
+      !! in a different part of the batch, so the gates make the threads run one slot at a time
+      !$omp do schedule (monotonic: dynamic, 1)
       do k = 1, nslot - 1
         call slot_run (ib, k)
       end do
